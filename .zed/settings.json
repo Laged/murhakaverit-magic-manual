@@ -1,0 +1,34 @@
+{
+  "lsp": {
+    "biome": {
+      "binary": {
+        "path": "biome",
+        "arguments": ["lsp-proxy"]
+      }
+    },
+    "nil": {
+      "binary": {
+        "path": "/nix/store/5qbzyhdwawlahylf19pc87hh98jw9nhc-nil-2025-06-13/bin/nil"
+      }
+    },
+    "tailwindcss-language-server": {
+      "settings": {
+        "classAttributes": ["class", "className", "classList", "ngClass"],
+        "includeLanguages": {
+          "typescript": "javascript",
+          "typescriptreact": "javascript"
+        },
+        "experimental": {
+          "configFile": null
+        }
+      }
+    }
+  },
+  "languages": {
+    "TSX": {
+      "code_actions_on_format": {
+        "source.organizeImports": true
+      }
+    }
+  }
+}

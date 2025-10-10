@@ -1,0 +1,157 @@
+:root {
+    --blood: #880808;
+    --blood-dark: #4a0404;
+
+    /* Drop sizes - scaled up and stretched for dramatic effect */
+    --drop-large-width: 70px;
+    --drop-large-height: 140px;
+    --drop-small-width: 35px;
+    --drop-small-height: 70px;
+}
+
+.container {
+    position: relative;
+    background: #000;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.blendArea {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    filter: blur(4px) contrast(20);
+    background: #000;
+    overflow: hidden;
+}
+
+.bar {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 40px;
+    background: #880808;
+    z-index: 10;
+}
+
+.barBlur {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 40px;
+    background: #880808;
+}
+
+.dropLarge {
+    position: absolute;
+    top: -10px;
+    width: var(--drop-large-width);
+    height: var(--drop-large-height);
+    animation: drop-anim-large 6s cubic-bezier(0.6, 0, 1, 1) infinite;
+    transform-origin: top center;
+}
+
+.dropSmall {
+    position: absolute;
+    top: 10px;
+    width: var(--drop-small-width);
+    height: var(--drop-small-height);
+    animation: drop-anim-small 4s cubic-bezier(0.6, 0, 1, 1) infinite;
+    transform-origin: top center;
+}
+
+/* Large drop positions */
+.dropLarge:nth-child(1) {
+    left: calc(20% - 25px);
+    animation-delay: 0s;
+}
+.dropLarge:nth-child(2) {
+    left: calc(40% - 25px);
+    animation-delay: 2s;
+}
+.dropLarge:nth-child(3) {
+    left: calc(50% - 25px);
+    animation-delay: 5s;
+}
+.dropLarge:nth-child(4) {
+    left: calc(65% - 25px);
+    animation-delay: 3s;
+}
+.dropLarge:nth-child(5) {
+    left: calc(85% - 25px);
+    animation-delay: 7s;
+}
+
+/* Small drop positions */
+.dropSmall:nth-child(6) {
+    left: calc(10% - 19px);
+    animation-delay: 0.5s;
+}
+.dropSmall:nth-child(7) {
+    left: calc(25% - 15px);
+    animation-delay: 1.2s;
+}
+.dropSmall:nth-child(8) {
+    left: calc(35% - 15px);
+    animation-delay: 2.5s;
+}
+.dropSmall:nth-child(9) {
+    left: calc(55% - 15px);
+    animation-delay: 0.8s;
+}
+.dropSmall:nth-child(10) {
+    left: calc(70% - 15px);
+    animation-delay: 1.8s;
+}
+.dropSmall:nth-child(11) {
+    left: calc(80% - 15px);
+    animation-delay: 0.2s;
+}
+.dropSmall:nth-child(12) {
+    left: calc(92% - 15px);
+    animation-delay: 2.2s;
+}
+
+@keyframes drop-anim-large {
+    0% {
+        top: -10px;
+        transform: scaleY(0.2);
+    }
+    85% {
+        /* 5.1s to form at the bar */
+        top: 20px;
+        transform: scaleY(1);
+    }
+    100% {
+        /* 0.9s to fall with aggressive gravity */
+        top: 100%;
+        transform: scaleY(1);
+    }
+}
+
+@keyframes drop-anim-small {
+    0% {
+        top: 10px;
+        transform: scaleY(0.2);
+    }
+    80% {
+        /* 3.2s to form at the bar */
+        top: 20px;
+        transform: scaleY(1);
+    }
+    100% {
+        /* 0.8s to fall with aggressive gravity */
+        top: 100%;
+        transform: scaleY(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dropLarge,
+    .dropSmall {
+        animation: none;
+    }
+}
