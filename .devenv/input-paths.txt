@@ -1,0 +1,5 @@
+/home/laged/Codings/laged/murhakaverit-magic-manual/.devenv/flake.json
+/home/laged/Codings/laged/murhakaverit-magic-manual/.devenv.flake.nix
+/home/laged/Codings/laged/murhakaverit-magic-manual/devenv.lock
+/home/laged/Codings/laged/murhakaverit-magic-manual/devenv.nix
+/home/laged/Codings/laged/murhakaverit-magic-manual/devenv.yaml

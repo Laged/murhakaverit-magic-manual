@@ -30,15 +30,15 @@
   '';
 
   scripts.dev.exec = ''
-    cd murhakaverit-magic-manual && bun run dev
+    bun run dev
   '';
 
   scripts.build.exec = ''
-    cd murhakaverit-magic-manual && bun run build
+    bun run build
   '';
 
   scripts.run.exec = ''
-    cd murhakaverit-magic-manual && bun run start
+    bun run start
   '';
 
   enterShell = ''

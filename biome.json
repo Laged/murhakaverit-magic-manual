@@ -8,10 +8,14 @@
   "files": {
     "ignoreUnknown": true,
     "includes": [
-      "murhakaverit-magic-manual/**/*.ts",
-      "murhakaverit-magic-manual/**/*.tsx",
-      "murhakaverit-magic-manual/**/*.js",
-      "murhakaverit-magic-manual/**/*.jsx"
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx"
     ]
   },
   "formatter": {
