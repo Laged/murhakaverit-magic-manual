@@ -6,15 +6,16 @@ This document captures the structure of the new homepage scene after the hero re
 
 ```
 page.tsx ("/")
-└─ BloodDroplet
-   ├─ gooChildren
-   │  ├─ <DropletShape ... /> × n
-   │  └─ <div className={styles.titleGoo}>murhakaverit</div>
-   └─ crispChildren
-      └─ <div className={styles.titleCrisp}>murhakaverit</div>
+└─ BloodDropletScene (client)
+   └─ BloodDroplet
+      ├─ gooChildren
+      │  ├─ <DropletShape ... /> × n
+      │  └─ <div className={styles.titleGoo}>murhakaverit</div>
+      └─ crispChildren
+         └─ <div className={styles.titleCrisp}>murhakaverit</div>
 ```
 
-- The page keeps a small config surface (`BASE_OFFSETS`, `JITTER_RANGE`, clamp bounds) and produces an array of `{ offset, scale, delay }`. This keeps layout logic near the route while rendering details stay encapsulated in `BloodDroplet`.
+- `BloodDropletScene` owns the randomisation loop. It generates `{ id, offset, scale, delay }`, listens for the first droplet's `animationiteration`, and re-runs the generator so every cycle differs.
 - Both titles share the same markup and font settings, so they remain perfectly aligned; only their colour and blur differ.
 
 ## 2. BloodDroplet Responsibilities
@@ -39,15 +40,16 @@ page.tsx ("/")
 
 ## 4. Configuration Points
 
-Page-level constants (`src/app/page.tsx`):
+Scene-level constants (`src/components/BloodDropletScene.tsx`):
 
 - `BASE_OFFSETS`: canonical horizontal anchors. Add/remove entries to change the drop count.
 - `JITTER_RANGE`: how far a droplet may wander left/right (± percentage points) before clamping to 5–95 %.
-- `getRandomScale`: current distribution (`0.25–1.5×`). Swap for deterministic arrays if you need strict art direction.
+- `getRandomScale`: multiplies the base range (`0.25–1.5×`) by a responsive multiplier derived from viewport width.
 
 Component props:
 
 - `BloodDroplet.barHeight` – keeps the goo bars in sync with the SVG asset.
+- `BloodDroplet.theme` – toggles between the original black backdrop (`"dark"`) and the white variant (`"light"`) so you can compare palettes quickly.
 - `DropletShape.scale` – adapts droplet size for breakpoints (can be fed with media-query logic).
 - `DropletShape.delay` – controls tempo; use smaller increments for a denser drizzle.
 

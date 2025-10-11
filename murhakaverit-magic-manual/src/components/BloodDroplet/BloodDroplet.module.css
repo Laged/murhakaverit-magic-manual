@@ -2,7 +2,7 @@
 
 :root {
     --blood-red: #880808;
-    --title-font-size: clamp(3rem, 16vw, 13rem);
+    --title-font-size: clamp(3rem, 30vw, 15rem);
 }
 
 /* Red background title (blends with droplets) */
@@ -18,18 +18,18 @@
     font-family: "Creepster", cursive;
     font-size: var(--title-font-size);
     text-transform: uppercase;
-    color: var(--blood-red);
+    color: var(--title-goo-color, var(--blood-red));
     margin: 0;
     padding: 0;
-    line-height: 1;
+    line-height: 0.8;
     white-space: nowrap;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    -webkit-text-stroke: 1px var(--blood-red);
+    font-weight: 900;
+    letter-spacing: clamp(0em, 0.5vw, 0.35em);
+    -webkit-text-stroke: 1px var(--title-goo-stroke, var(--blood-red));
     paint-order: stroke fill;
     text-shadow:
-        0 3px 0 var(--blood-red),
-        0 6px 2px rgba(136, 8, 8, 0.8);
+        0 3px 0 var(--title-goo-shadow1, var(--blood-red)),
+        0 6px 2px var(--title-goo-shadow2, rgba(136, 8, 8, 0.8));
 }
 
 /* Crisp white title (sharp overlay) */
@@ -46,12 +46,13 @@
     font-family: "Creepster", cursive;
     font-size: var(--title-font-size);
     text-transform: uppercase;
-    color: #ffffff;
+    color: var(--title-crisp-color, #fff);
     margin: 0;
     padding: 0;
-    line-height: 1;
+    line-height: 0.8;
     white-space: nowrap;
+    letter-spacing: clamp(0em, 0.8vw, 0.35em);
     text-shadow:
-        0 0 0.2rem rgba(255, 255, 255, 0.35),
-        0 0 0.65rem rgba(255, 255, 255, 0.15);
+        0 0 0.2rem var(--title-crisp-shadow1, rgba(255, 255, 255, 0.35)),
+        0 0 0.65rem var(--title-crisp-shadow2, rgba(255, 255, 255, 0.15));
 }

@@ -24,6 +24,8 @@ Each droplet is an absolute-positioned SVG that follows the `fall` keyframe defi
 
 Every transition except the hover section uses a cubic-bezier easing that starts gently and finishes aggressively. Matching curves are applied to the 0→48 % and 54→100 % segments, so the fall from the top pool and the drop from the title read with the same gravity profile.
 
+When the first droplet finishes an animation loop it triggers the optional `onIteration` callback. The homepage (`BloodDropletScene`) listens to that event to regenerate offsets and scales, so each cycle uses a fresh pattern without waiting for manual interaction.
+
 ## Debugging Tips
 
 - Because the animation relies on absolute `top` values, debugging is easiest with the browser DevTools “element box model” overlay—inspect a droplet and scrub the animation to see exact positions.

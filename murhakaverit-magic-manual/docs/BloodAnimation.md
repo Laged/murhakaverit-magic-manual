@@ -51,23 +51,28 @@ Each `DropletShape` renders the shared SVG path and injects the `fall` keyframes
 
 Because each droplet accepts its own `scale`, `offset`, and `delay`, the page can easily support deterministic patterns or the randomised setup now used on the home route.
 
+The component also exposes a `theme` prop (`"dark"` by default). Switching it to `"light"` flips the base surface to white while keeping the red goo intact, which makes it simple to compare palettes without touching the animation code.
+
 ## 4. Random Placement
 
-`src/app/page.tsx` generates droplet metadata on every request:
+`src/components/BloodDropletScene.tsx` owns the droplet metadata:
 
 ```ts
 const BASE_OFFSETS = [20, 40, 60, 80];
 const JITTER_RANGE = 12; // ± percentage points
-const getRandomScale = () => Math.random() * 1.25 + 0.25;
+const getRandomScale = (scaleMultiplier: number) =>
+  (Math.random() * 1.25 + 0.25) * scaleMultiplier;
 ```
 
-Each base offset is jittered and clamped between 5 % and 95 % to avoid clipping at the edges. Scaling ranges from 0.25× to 1.5×. Because we export `dynamic = "force-dynamic"`, Next.js skips static rendering and generates a fresh pattern every page load.
+Each base offset is jittered and clamped between 5 % and 95 % to avoid clipping at the edges. Scaling ranges from roughly 0.15× to 1.5× depending on the responsive multiplier (`resolveScaleMultiplier`).
 
 To control the look:
 
 - **More droplets** – extend `BASE_OFFSETS` with new anchors.
-- **Different randomness** – tighten or widen `JITTER_RANGE`, or provide separate ranges for mobile/desktop.
-- **Synchronous animation** – set `delay` to `0` or pass your own timing array instead of `index * 0.5`.
+- **Different randomness** – tighten or widen `JITTER_RANGE`, or adjust `resolveScaleMultiplier` to redefine breakpoint behaviour.
+- **Synchronous animation** – set `DELAY_INCREMENT` to `0` or override individual delays.
+
+`BloodDropletScene` listens for the first droplet's `animationiteration` event and regenerates offsets/scales immediately, so every loop looks different. It also reruns the generator whenever the viewport crosses a breakpoint, ensuring smaller devices receive proportionally smaller droplets.
 
 ## 5. Extending the Scene
 

@@ -1,21 +1,52 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import DropletShape from "./DropletShape";
 
 const BASE_DROPLET_HEIGHT = 62;
+type BloodDropletTheme = "dark" | "light";
+
+const BLOOD_THEME_VARS: Record<BloodDropletTheme, Record<string, string>> = {
+  dark: {
+    "--title-crisp-color": "#FFFFFF",
+    "--title-crisp-shadow1": "rgba(255, 255, 255, 0.35)",
+    "--title-crisp-shadow2": "rgba(255, 255, 255, 0.15)",
+    "--title-goo-color": "#880808",
+    "--title-goo-stroke": "#880808",
+    "--title-goo-shadow1": "#880808",
+    "--title-goo-shadow2": "rgba(136, 8, 8, 0.8)",
+  },
+  light: {
+    "--title-crisp-color": "#FFFFFF",
+    "--title-crisp-shadow1": "rgba(0, 0, 0, 0.25)",
+    "--title-crisp-shadow2": "rgba(0, 0, 0, 0.15)",
+    "--title-goo-color": "#880808",
+    "--title-goo-stroke": "#880808",
+    "--title-goo-shadow1": "#880808",
+    "--title-goo-shadow2": "rgba(136, 8, 8, 0.6)",
+  },
+};
 
 interface BloodDropletProps {
   gooChildren: ReactNode;
   crispChildren?: ReactNode;
   barHeight?: number;
+  theme?: BloodDropletTheme;
 }
 
 export default function BloodDroplet({
   gooChildren,
   crispChildren,
   barHeight = BASE_DROPLET_HEIGHT,
+  theme = "dark",
 }: BloodDropletProps) {
+  const backgroundClass = theme === "light" ? "bg-white" : "bg-black";
+  const themeStyles = BLOOD_THEME_VARS[theme] as CSSProperties;
+
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
+    <div
+      className={`relative h-full w-full overflow-hidden ${backgroundClass}`}
+      style={themeStyles}
+      data-blood-theme={theme}
+    >
       {/* SVG filter definition - defined once */}
       <svg className="absolute h-0 w-0 pointer-events-none" aria-hidden="true">
         <defs>
@@ -48,24 +79,15 @@ export default function BloodDroplet({
         }}
       >
         <div
-          className="absolute left-0 top-0 w-full bg-[#880808]"
-          style={{ height: `${barHeight}px` }}
+          className="absolute top-0 bg-[#880808]"
+          style={{ height: `${barHeight}px`, left: "-20px", right: "-20px" }}
         />
         {gooChildren}
         <div
-          className="absolute bottom-0 left-0 w-full bg-[#880808]"
-          style={{ height: `${barHeight}px` }}
+          className="absolute bottom-0 bg-[#880808]"
+          style={{ height: `${barHeight}px`, left: "-20px", right: "-20px" }}
         />
       </div>
-
-      {/* Crisp overlay layer - for sharp top bar and white text */}
-      <div
-        className="absolute left-0 top-0 w-full bg-[#880808] z-10"
-        style={{
-          height: `${barHeight}px`,
-          boxShadow: "0 12px 32px rgba(136, 8, 8, 0.45)",
-        }}
-      />
       {crispChildren}
     </div>
   );
