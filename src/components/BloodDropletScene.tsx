@@ -82,6 +82,7 @@ export default function BloodDropletScene({
   const [droplets, setDroplets] = useState<DropletConfig[]>(BASE_DROPLETS);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Update scale multiplier based on viewport width
@@ -153,7 +154,64 @@ export default function BloodDropletScene({
     return () => observer.disconnect();
   }, []);
 
+  // Detect prefers-reduced-motion
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, []);
+
   const containerBgClass = theme === "light" ? "bg-white" : "bg-black";
+
+  // Show static version if reduced motion preferred
+  if (prefersReducedMotion) {
+    return (
+      <div
+        className={`w-screen ${containerBgClass}`}
+        style={{ height: "95vh" }}
+      >
+        <BloodDroplet
+          theme={theme}
+          gooChildren={
+            <div className={styles.titleGoo} style={{ opacity: 0.5 }}>
+              <h1>
+                murha-
+                <br />
+                kaverit
+              </h1>
+            </div>
+          }
+          crispChildren={
+            <div className={styles.titleCrisp}>
+              <h1>
+                murha-
+                <br />
+                kaverit
+              </h1>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div
