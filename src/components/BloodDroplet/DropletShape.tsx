@@ -33,10 +33,10 @@ export default function DropletShape({
     "--drop-delay": `${delay}s`,
     "--drop-left": `${offset}%`,
     "--drop-top0": `${BASE_DROPLET_HEIGHT / 2 - height / 2}px`,
-    "--drop-top1": `calc(37% - ${height / 2}px)`,
-    "--drop-top2": `calc(65% - ${height / 2}px)`,
-    "--drop-top3": `calc(100% + ${height * 0.3}px)`,
-    "--drop-top4": `calc(100% + ${height * 0.6}px)`,
+    "--drop-top1": `37vh`,
+    "--drop-top2": `65vh`,
+    "--drop-top3": `100vh`,
+    "--drop-top4": `110vh`,
   } as CSSProperties;
 
   return (
