@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Card from "./Card";
 import styles from "./GraniittiSauna.module.css";
-import SmokeOverlay from "./SmokeOverlay";
 
 type GraniittiSaunaTheme = "light" | "dark";
 
@@ -18,9 +17,6 @@ export default function GraniittiSauna({
 
   return (
     <section className={sectionClass}>
-      <div className={styles.smokeContainer}>
-        <SmokeOverlay />
-      </div>
       <div className={styles.cardWrapper}>
         <Card theme={theme}>
           <div className="flex flex-col gap-8">

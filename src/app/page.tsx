@@ -10,8 +10,7 @@ export default function HomePage() {
   return (
     <main>
       <BloodDropletScene theme={HERO_THEME} />
-      {/* Temporarily removed for performance */}
-      {/* <GraniittiSauna theme={SAUNA_THEME} /> */}
+      <GraniittiSauna theme={SAUNA_THEME} />
     </main>
   );
 }
