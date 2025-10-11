@@ -1,13 +1,33 @@
-# Animation Phases
+# Animation Layout & Phases
 
-Each droplet loop is tiled into three phases so the motion never “blinks” when the CSS animation restarts. Large drops run for 6 s, small drops for 4 s, but both share the same timeline proportions and easing. All animations use `animation-fill-mode: both`, so the final frame holds until the next loop begins.
+The landing page is now entirely driven by the `BloodDroplet` stack. The component exposes three visual anchors that every droplet animation references:
 
-| Phase | Time Slice (large drop) | What Happens | Keyframes |
-| --- | --- | --- | --- |
-| 1. Formation | 0% → 20% | The droplet emerges from the 1.5 rem top bar. Scale jumps from 25 % to 85 % by 10 %, then reaches 100 % by 20 %. Opacity fades in between 0–6 % so the reset is invisible. | `drop-form`, `drop-form-goo`, early portion of `drop-motion-large` |
-| 2. Merge + Drift | 20% → 55% | At full size, the droplet eases through the `gooTitleWrap`. Motion slows between 35–55 % so the gooey halo around the text can merge smoothly while the crisp title (z-index 10) stays readable above it. | mid portion of `drop-motion-large` |
-| 3. Release | 55% → 100% | Gravity takes over, pulling the droplet toward the bottom puddle. Opacity fades to 0 between 90–100 % just as the droplet slips below the viewport, preventing any blink when the loop restarts. | tail portion of `drop-motion-large` |
+1. **Top reservoir** – a crisp rectangle rendered outside the goo filter. Droplets are spawned above this bar and only become visible once they clear its lip.
+2. **Centred title** – the red `titleGoo` clone and the white `titleCrisp` overlay occupy the middle of the viewport. Their shared `clamp(3rem, 16vw, 13rem)` font size defines how long droplets hover before breaking away.
+3. **Bottom spill** – the lower bar rendered inside the filter provides the puddle that droplets stretch into on their final descent.
 
-Small droplets follow the same phase percentages, joining the stream slightly later (8 %) to clear the bar cleanly.
+Because both the top and bottom bars come from `BloodDroplet`, the same `barHeight` is used as the reference thickness for every droplet keyframe. No additional layout variables are required.
 
-The bottom puddle breathes horizontally (`puddle-breathe`) to hint at impact ripples. During Phase 2 the red title clone (`.titleLayerGoo`) sits directly beneath the crisp lettering, so droplets can merge into the same glyph outlines without disturbing the white text on top.
+## Phase Breakdown (`DropletShape`)
+
+Each droplet is an absolute-positioned SVG that follows the `fall` keyframe defined in `src/components/BloodDroplet/DropletShape.tsx`. The table below lists the exact percentages and transformations used today:
+
+| %    | `top` / `scaleY`                                         | Purpose |
+| ---- | -------------------------------------------------------- | ------- |
+| 0    | `top: -height`, `scaleY(0.96)`                           | Droplet appears above the bar and begins to swell slowly. |
+| 16   | `top: -0.6 × height`, `scaleY(1.03)`                     | Stays near the reservoir while the gooey swell finishes. |
+| 30   | `top: -0.12 × height`, `scaleY(1.06)`                    | Final slow crawl just before crossing the bar lip. |
+| 48   | `top: 50% - height / 2`, `scaleY(0.9)`                   | Centre of the title; velocity is still linear for the “hover”. |
+| 54   | `top: 50% + 0.1 × height`, `scaleY(0.95)`                | Releases from the lettering and hands off to the gravity easing. |
+| 76   | `top: 100% + 0.3 × height`, `scaleY(1.22)`               | Mid-air stretch as the droplet accelerates. |
+| 100  | `top: 100% + 0.6 × height`, `scaleY(1.32)`               | Exits below the viewport, ready to loop. |
+
+Every transition except the hover section uses a cubic-bezier easing that starts gently and finishes aggressively. Matching curves are applied to the 0→48 % and 54→100 % segments, so the fall from the top pool and the drop from the title read with the same gravity profile.
+
+## Debugging Tips
+
+- Because the animation relies on absolute `top` values, debugging is easiest with the browser DevTools “element box model” overlay—inspect a droplet and scrub the animation to see exact positions.
+- To adjust the pause length, shift the 30 % or 54 % keyframes. Moving them closer together shortens the hover; spreading them apart slows the hand-off to the freefall.
+- When experimenting, remember that the droplet height already includes its `scale` prop. For example, a scale of `0.5` halves the computed `height` used for all `top` calculations above.
+
+These notes track the code as of this refactor. If you add new stages to the motion, update the table so we always have human-readable anchors for the easing tweaks.

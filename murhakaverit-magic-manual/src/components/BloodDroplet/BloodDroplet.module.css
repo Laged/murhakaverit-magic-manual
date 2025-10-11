@@ -1,0 +1,57 @@
+@import url("https://fonts.googleapis.com/css2?family=Creepster&display=swap");
+
+:root {
+    --blood-red: #880808;
+    --title-font-size: clamp(3rem, 16vw, 13rem);
+}
+
+/* Red background title (blends with droplets) */
+.titleGoo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.titleGoo h1 {
+    font-family: "Creepster", cursive;
+    font-size: var(--title-font-size);
+    text-transform: uppercase;
+    color: var(--blood-red);
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    white-space: nowrap;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    -webkit-text-stroke: 1px var(--blood-red);
+    paint-order: stroke fill;
+    text-shadow:
+        0 3px 0 var(--blood-red),
+        0 6px 2px rgba(136, 8, 8, 0.8);
+}
+
+/* Crisp white title (sharp overlay) */
+.titleCrisp {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.titleCrisp h1 {
+    font-family: "Creepster", cursive;
+    font-size: var(--title-font-size);
+    text-transform: uppercase;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow:
+        0 0 0.2rem rgba(255, 255, 255, 0.35),
+        0 0 0.65rem rgba(255, 255, 255, 0.15);
+}

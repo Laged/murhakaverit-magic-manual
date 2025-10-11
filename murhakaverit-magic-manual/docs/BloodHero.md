@@ -1,78 +1,60 @@
-# Blood Hero Architecture
+# Blood Scene Architecture
 
-This document explains how the hero scene is organised, how the SVG goo filter blends DOM elements with the animated blood droplets, and what to adjust when extending the effect.
+This document captures the structure of the new homepage scene after the hero refactor. Only two modules remain in play: `BloodDroplet` for layout/filtering and `DropletShape` for the animated SVG drops.
 
-## 1. Component Layout
+## 1. Component Graph
 
-HeroSVG mounts ContainerHeroSVG. Inside it we have:
+```
+page.tsx ("/")
+└─ BloodDroplet
+   ├─ gooChildren
+   │  ├─ <DropletShape ... /> × n
+   │  └─ <div className={styles.titleGoo}>murhakaverit</div>
+   └─ crispChildren
+      └─ <div className={styles.titleCrisp}>murhakaverit</div>
+```
 
-- **GooFilterDefs** – the single `<svg>` filter definition.
-- **.container** – the viewport wrapper.
-  - **.gooLayer** – holds bar, droplets, puddle, and any goo-only children.
-    - **.gooCenter** – absolute-centred stack used for `gooTitleWrap` and future goo elements.
-  - **.bar** – a slim crisp top edge rendered outside the filter.
-  - **.dropsCrisp** – optional masked overlays (e.g. crisp droplets) with an absolute **.crispCenter** helper.
-  - **.content** – foreground layer (z-index 10) containing **.contentCenter**, which keeps the white title perfectly centred.
-- **ContainerHeroSVG.BloodDroplet** – exported helper for consumers who want additional droplets.
+- The page keeps a small config surface (`BASE_OFFSETS`, `JITTER_RANGE`, clamp bounds) and produces an array of `{ offset, scale, delay }`. This keeps layout logic near the route while rendering details stay encapsulated in `BloodDroplet`.
+- Both titles share the same markup and font settings, so they remain perfectly aligned; only their colour and blur differ.
 
-## 2. Goo Layer Contents
+## 2. BloodDroplet Responsibilities
 
-Inside `.gooLayer` we render:
+`src/components/BloodDroplet/index.tsx`:
 
-1. `.gooBar` – a 1.5 rem rectangle hugging the top edge.
-2. `.gooPool` – a shallow ellipse just below the bar to provide volume without exceeding the slim lip.
-3. `.gooPuddle` – a 2 rem ellipse at the bottom that breathes horizontally so falling drops merge naturally.
-4. `BloodDropletSVG` instances with `variant="liquid"` – animated droplets that grow out of the bar, pause near the title, then accelerate downward.
-5. A red `TitleHeroSVG` clone inside `.gooCenter` tinted with `.titleLayerGoo`, which mirrors the crisp glyphs exactly but adds a light blur so droplets can merge into the lettering without shifting its outline.
+- Inlines the goo filter once with `id="goo"` and expands its bounds (`width/height = 200%`) so off-screen blur is preserved.
+- Renders a filtered layer (`filter: url('#goo')`) containing the crimson top bar, all `gooChildren`, and the bottom bar.
+- Adds a crisp copy of the top bar outside the filter to keep a clean lip.
+- Renders `crispChildren` at z-index 10 so foreground content stays readable while droplets pass behind it.
 
-Every shape in this layer uses `#880808`, so the colour matrix merges them into one blob during the filter pass.
+`barHeight` defaults to 62px to match the base SVG height. If the droplet asset changes, update this prop and the animation will continue to line up with the bars.
 
-## 3. Blood Droplet Component
+## 3. DropletShape Responsibilities
 
-`BloodDropletSVG` accepts `size`, `delay`, `position`, and an optional `variant`:
+`src/components/BloodDroplet/DropletShape.tsx` implements a single `fall` keyframe timeline.
 
-- `variant="liquid"` uses the goo-forming keyframes and belongs in `.gooLayer`.
-- `variant="shape"` keeps the crisp outline for overlays in `.dropsCrisp`.
+- **Scalable path** – the `top` math references the computed `DROPLET_HEIGHT`, so the `scale` prop automatically rescales the motion.
+- **Mirrored easing** – both freefall sections (top reservoir → title, title → bottom bar) share the same gravity-flavoured cubic-bezier curves, creating a symmetrical feel.
+- **Hover band** – only the 30 % → 48 % and 48 % → 54 % ranges are linear, producing the visible slow-down over the text.
+- **Delay friendly** – the inline style applies `animationDelay`, making staggered rain patterns trivial.
 
-Key CSS hooks include:
+## 4. Configuration Points
 
-- `.dropLarge` / `.dropSmall` set width and animation duration (6 s vs 4 s).
-- `@keyframes drop-motion-*` includes a 35–55 % plateau so droplets slow near the centred title before releasing.
-- `@keyframes drop-form` / `drop-form-goo` now reach full scale by 20 % progress, ensuring drops hit maximum volume right after leaving the bar.
+Page-level constants (`src/app/page.tsx`):
 
-## 4. Foreground Layer
+- `BASE_OFFSETS`: canonical horizontal anchors. Add/remove entries to change the drop count.
+- `JITTER_RANGE`: how far a droplet may wander left/right (± percentage points) before clamping to 5–95 %.
+- `getRandomScale`: current distribution (`0.25–1.5×`). Swap for deterministic arrays if you need strict art direction.
 
-Above the goo layer we render:
+Component props:
 
-1. `.bar` – the unfiltered top bar that masks any halo.
-2. `.dropsCrisp` – optional crisp clones of droplets or overlays, masked so they only appear below the 1.5 rem lip.
-3. `.content` / `.contentCenter` – the white title and decorative SVGs, centred horizontally and vertically so the text remains perfectly aligned while droplets travel behind it. The red `gooTitleWrap` beneath ensures a soft, gooey background surrounds the lettering.
+- `BloodDroplet.barHeight` – keeps the goo bars in sync with the SVG asset.
+- `DropletShape.scale` – adapts droplet size for breakpoints (can be fed with media-query logic).
+- `DropletShape.delay` – controls tempo; use smaller increments for a denser drizzle.
 
-Because `.content` sits at z-index 10, droplets visibly pass behind the text while it stays readable.
+## 5. Extensibility
 
-## 5. Prop Surface
+- Place new goo-only elements inside `gooChildren` and tint them `#880808` so the filter blends them seamlessly.
+- For crisp overlays (logos, CTAs), render them via `crispChildren` or wrap `BloodDroplet` with additional positioned layers.
+- If future scenes reuse the goo background, `BloodDroplet` can be mounted as a standalone background component—the filter is scoped and does not affect siblings.
 
-`ContainerHeroSVG` exposes:
-
-- `gooChildren` – rendered inside `.gooCenter` after the static goo shapes.
-- `crispChildren` – rendered inside `.crispCenter` within `.dropsCrisp`.
-- `children` – rendered inside `.content` (usually the centred title stack).
-- `extraDroplets` – appended to `.dropsCrisp` for additional overlays.
-
-## 6. Extending the Blend
-
-To include additional elements:
-
-1. Place readable text in `.contentCenter` so it stays above the goo.
-2. Add a darker clone via `gooChildren` if you want it to participate in the goo effect.
-3. Adjust the droplet plateau timings if new elements sit higher or lower than the main title.
-4. Keep new goo shapes within the 2 rem height budget and the shared `#880808` colour.
-
-## 7. Implementation Notes
-
-- The goo filter values (`18 -7`) come from CSS-Tricks and balance smooth merging with retained volume.
-- Keep `.gooLayer` minimal; anything rendered there incurs the expensive blur.
-- The breathing puddle only scales on the X axis, so it respects the 2 rem height cap.
-- When tweaking droplet speeds, preserve the plateau so the slowdown around the title stays noticeable.
-
-Follow this layout whenever refining the hero. It balances readability (sharp overlays), drama (gooey merge), and future expansion without complicating the component tree.
+Documenting this structure keeps the refactor self-explanatory and prevents the larger, deprecated hero tree from creeping back into the codebase.
