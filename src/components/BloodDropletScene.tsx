@@ -34,8 +34,11 @@ const getRandomOffset = (base: number) =>
 const getRandomScale = (scaleMultiplier: number) =>
   (Math.random() * 1.25 + 0.25) * scaleMultiplier;
 
-const createDroplets = (scaleMultiplier: number): DropletConfig[] =>
-  BASE_OFFSETS.map((baseOffset, index) => ({
+const createDroplets = (
+  scaleMultiplier: number,
+  count: number,
+): DropletConfig[] =>
+  BASE_OFFSETS.slice(0, count).map((baseOffset, index) => ({
     id: randomId(),
     offset: getRandomOffset(baseOffset),
     scale: getRandomScale(scaleMultiplier),
@@ -50,6 +53,13 @@ const BASE_DROPLETS: DropletConfig[] = BASE_OFFSETS.map(
     delay: index * DELAY_INCREMENT,
   }),
 );
+
+const getDropletCount = (width: number) => {
+  if (width <= 480) return 3; // Mobile: 3 droplets
+  if (width <= 768) return 4; // Tablet: 4 droplets
+  if (width <= 1024) return 5; // Small desktop: 5 droplets
+  return 7; // Desktop: 7 droplets
+};
 
 const resolveScaleMultiplier = (width: number) => {
   if (width <= 480) return 0.6;
@@ -68,6 +78,7 @@ export default function BloodDropletScene({
   theme = "dark",
 }: BloodDropletSceneProps) {
   const [scaleMultiplier, setScaleMultiplier] = useState(1);
+  const [dropletCount, setDropletCount] = useState(7);
   const [droplets, setDroplets] = useState<DropletConfig[]>(BASE_DROPLETS);
   const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -87,6 +98,7 @@ export default function BloodDropletScene({
         const resolved = resolveScaleMultiplier(width);
         return prev === resolved ? prev : resolved;
       });
+      setDropletCount(getDropletCount(width));
     };
 
     updateMultiplier();
@@ -110,16 +122,16 @@ export default function BloodDropletScene({
     };
   }, []);
 
-  // Regenerate droplets whenever the scale multiplier changes
+  // Regenerate droplets whenever the scale multiplier or count changes
   useEffect(() => {
-    setDroplets(createDroplets(scaleMultiplier));
+    setDroplets(createDroplets(scaleMultiplier, dropletCount));
     setHasHydrated(true);
-  }, [scaleMultiplier]);
+  }, [scaleMultiplier, dropletCount]);
 
   const reshuffleDroplets = useCallback(() => {
     if (!hasHydrated) return;
-    setDroplets(createDroplets(scaleMultiplier));
-  }, [hasHydrated, scaleMultiplier]);
+    setDroplets(createDroplets(scaleMultiplier, dropletCount));
+  }, [hasHydrated, scaleMultiplier, dropletCount]);
 
   const containerBgClass = theme === "light" ? "bg-white" : "bg-black";
 
