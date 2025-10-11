@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import BloodDroplet, { DropletShape } from "@/components/BloodDroplet";
 import styles from "@/components/BloodDroplet/BloodDroplet.module.css";
 
@@ -81,6 +81,8 @@ export default function BloodDropletScene({
   const [dropletCount, setDropletCount] = useState(7);
   const [droplets, setDroplets] = useState<DropletConfig[]>(BASE_DROPLETS);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Update scale multiplier based on viewport width
   useEffect(() => {
@@ -133,10 +135,32 @@ export default function BloodDropletScene({
     setDroplets(createDroplets(scaleMultiplier, dropletCount));
   }, [hasHydrated, scaleMultiplier, dropletCount]);
 
+  // Intersection Observer to pause animations when offscreen
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsVisible(entry.isIntersecting);
+        });
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
   const containerBgClass = theme === "light" ? "bg-white" : "bg-black";
 
   return (
-    <div className={`w-screen ${containerBgClass}`} style={{ height: "95vh" }}>
+    <div
+      ref={containerRef}
+      className={`w-screen ${containerBgClass}`}
+      style={{ height: "95vh" }}
+    >
       <BloodDroplet
         theme={theme}
         gooChildren={
@@ -147,6 +171,7 @@ export default function BloodDropletScene({
                 offset={droplet.offset}
                 delay={droplet.delay}
                 scale={droplet.scale}
+                isPaused={!isVisible}
                 onIteration={index === 0 ? reshuffleDroplets : undefined}
               />
             ))}
