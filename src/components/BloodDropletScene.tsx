@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import BloodDroplet, { DropletShape } from "@/components/BloodDroplet";
 import styles from "@/components/BloodDroplet/BloodDroplet.module.css";
 
-const BASE_OFFSETS = [20, 30, 40, 50, 60, 70, 80];
-const JITTER_RANGE = 12;
-const MIN_OFFSET = 5;
-const MAX_OFFSET = 95;
+// Droplets fall centered over "MURHA" (5 chars) - narrower spread
+const BASE_OFFSETS = [35, 40, 45, 50, 55, 60, 65];
+const JITTER_RANGE = 5;
+const MIN_OFFSET = 30;
+const MAX_OFFSET = 70;
 const DELAY_INCREMENT = 0.25; // seconds between droplets
 
 interface DropletConfig {
