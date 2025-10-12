@@ -2,6 +2,7 @@
 
 import type { Application } from "pixi.js";
 import { useEffect, useRef, useState } from "react";
+import { PixiDropletRenderer } from "./PixiDropletRenderer";
 
 interface PixiDropletCanvasProps {
   theme: "dark" | "light";
@@ -11,14 +12,15 @@ interface PixiDropletCanvasProps {
 }
 
 export default function PixiDropletCanvas({
-  theme: _theme,
-  dropletCount: _dropletCount,
-  scaleMultiplier: _scaleMultiplier,
+  theme,
+  dropletCount,
+  scaleMultiplier,
   isPaused = false,
 }: PixiDropletCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const appRef = useRef<Application | null>(null);
-  const [_isReady, setIsReady] = useState(false);
+  const rendererRef = useRef<PixiDropletRenderer | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   // Initialize PixiJS Application
   useEffect(() => {
@@ -42,18 +44,43 @@ export default function PixiDropletCanvas({
       });
 
       appRef.current = app;
+
+      // Create renderer
+      const renderer = new PixiDropletRenderer(app, PIXI);
+      await renderer.init(dropletCount, scaleMultiplier);
+      rendererRef.current = renderer;
+
       setIsReady(true);
     };
 
     initPixi();
 
     return () => {
+      if (rendererRef.current) {
+        rendererRef.current.destroy();
+        rendererRef.current = null;
+      }
+
       if (appRef.current) {
         appRef.current.destroy(true, { children: true });
         appRef.current = null;
       }
     };
-  }, []);
+  }, [dropletCount, scaleMultiplier]);
+
+  // Update droplet count when changed
+  useEffect(() => {
+    if (!isReady || !rendererRef.current) return;
+
+    rendererRef.current.updateDropletCount(dropletCount, scaleMultiplier);
+  }, [dropletCount, scaleMultiplier, isReady]);
+
+  // Update theme
+  useEffect(() => {
+    if (!isReady || !rendererRef.current) return;
+
+    rendererRef.current.updateTheme(theme);
+  }, [theme, isReady]);
 
   // Handle pause state
   useEffect(() => {
