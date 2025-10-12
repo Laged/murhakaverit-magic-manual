@@ -243,7 +243,7 @@ export default function BloodDropletScene({
         </div>
       ) : hasWebGL ? (
         // WebGL-based rendering with PixiJS
-        <>
+        <div style={{ position: "relative", width: "100%", height: "100%" }}>
           {/* PixiJS canvas with internal blur filter for goo effect */}
           <PixiDropletCanvas
             theme={theme}
@@ -252,7 +252,7 @@ export default function BloodDropletScene({
             isPaused={!isVisible}
           />
           {/* Red title layer rendered by PixiJS (will be added to canvas) */}
-          {/* White crisp overlay title */}
+          {/* White crisp overlay title - always on top with z-index: 20 */}
           <div className={styles.titleCrisp}>
             <h1>
               murha-
@@ -260,7 +260,7 @@ export default function BloodDropletScene({
               kaverit
             </h1>
           </div>
-        </>
+        </div>
       ) : (
         // CSS-based fallback rendering
         <CrispBloodDroplet

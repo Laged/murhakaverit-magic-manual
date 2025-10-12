@@ -90,25 +90,25 @@ export class PixiDropletRenderer {
       quality: this.quality.blurQuality,
     });
 
-    // Color matrix filter for contrast (alpha * 20 - 8)
-    // Matches feColorMatrix: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
-    const colorMatrix = new this.PIXI.ColorMatrixFilter();
-    colorMatrix.matrix = [
+    // Alpha blending filter for goo effect (alpha * 20 - 8)
+    // Works on white shapes to create clean blending
+    const alphaMatrix = new this.PIXI.ColorMatrixFilter();
+    alphaMatrix.matrix = [
       1,
       0,
       0,
       0,
-      0, // Red channel
+      0, // Red channel (pass through)
       0,
       1,
       0,
       0,
-      0, // Green channel
+      0, // Green channel (pass through)
       0,
       0,
       1,
       0,
-      0, // Blue channel
+      0, // Blue channel (pass through)
       0,
       0,
       0,
@@ -116,7 +116,34 @@ export class PixiDropletRenderer {
       -8, // Alpha channel: multiply by 20, subtract 8
     ];
 
-    this.gooContainer.filters = [this.blurFilter, colorMatrix];
+    // Color tint filter to convert white → #880808
+    // #880808 = RGB(136, 8, 8) = RGB(0.533, 0.031, 0.031) in normalized form
+    const colorTint = new this.PIXI.ColorMatrixFilter();
+    colorTint.matrix = [
+      0.533,
+      0,
+      0,
+      0,
+      0, // Red: 136/255 = 0.533
+      0,
+      0.031,
+      0,
+      0,
+      0, // Green: 8/255 = 0.031
+      0,
+      0,
+      0.031,
+      0,
+      0, // Blue: 8/255 = 0.031
+      0,
+      0,
+      0,
+      1,
+      0, // Alpha: keep unchanged
+    ];
+
+    // Apply filters: blur → alpha blending → color tint
+    this.gooContainer.filters = [this.blurFilter, alphaMatrix, colorTint];
 
     // Add top bar
     const topBar = this.createBar(0);
@@ -157,12 +184,12 @@ export class PixiDropletRenderer {
       style: {
         fontFamily: "Creepster, cursive",
         fontSize: this.calculateTitleFontSize(),
-        fill: 0x880808,
+        fill: 0xffffff, // White - will be tinted to #880808 by filter
         align: "center",
         lineHeight: 0.8 * this.calculateTitleFontSize(),
         fontWeight: "900",
         letterSpacing: 0,
-        stroke: { color: 0x880808, width: 1 },
+        stroke: { color: 0xffffff, width: 1 },
       },
     });
 
@@ -227,7 +254,7 @@ export class PixiDropletRenderer {
   private createBar(y: number): Graphics {
     const bar = new this.PIXI.Graphics();
     bar.rect(-20, y, this.app.screen.width + 40, 62);
-    bar.fill({ color: 0x880808 });
+    bar.fill({ color: 0xffffff }); // White - will be tinted to #880808 by filter
     return bar;
   }
 
@@ -299,18 +326,24 @@ export class PixiDropletRenderer {
       ((y3 - 25.36) / 62) * h,
     );
 
-    droplet.fill({ color: 0x880808 });
+    droplet.fill({ color: 0xffffff }); // White - will be tinted to #880808 by filter
 
     return droplet;
   }
 
   private generateDropletConfigs(count: number): DropletConfig[] {
-    const baseOffsets = [35, 40, 45, 50, 55, 60, 65];
+    // Tighter spread to stay over "MURHA" only (38-58%)
+    const baseOffsets = [38, 42, 46, 50, 54, 58];
     const configs: DropletConfig[] = [];
 
     for (let i = 0; i < count; i++) {
+      const baseIndex = i % baseOffsets.length;
+      const baseOffset = baseOffsets[baseIndex];
+      const jitter = (Math.random() * 2 - 1) * 3; // ±3% jitter
+      const x = Math.max(0.35, Math.min(0.6, (baseOffset + jitter) / 100)); // Clamp to 35-60%
+
       configs.push({
-        x: (baseOffsets[i] + (Math.random() * 2 - 1) * 5) / 100,
+        x: x,
         speed: 1 / 9, // 9 seconds per cycle to match CSS animation
         scale: 0.5 + Math.random() * 1.0,
         delay: i * 0.25,
@@ -394,7 +427,22 @@ export class PixiDropletRenderer {
       droplet.alpha = 1;
 
       // Update phase (0 to 1 over 9 seconds)
+      const previousPhase = config.phase;
       config.phase = ((this.elapsedTime - config.delay) * config.speed) % 1;
+
+      // Randomize x position when cycle completes (phase wraps from ~1 to ~0)
+      if (previousPhase > config.phase) {
+        // Regenerate random x offset within MURHA spread (38-58%)
+        // Tighter spread to stay over "MURHA" and not overlap the hyphen
+        const baseOffsets = [38, 42, 46, 50, 54, 58];
+        const baseIndex = i % baseOffsets.length;
+        const baseOffset = baseOffsets[baseIndex];
+        const jitter = (Math.random() * 2 - 1) * 3; // ±3% jitter (reduced from 5%)
+        config.x = Math.max(0.35, Math.min(0.6, (baseOffset + jitter) / 100)); // Clamp to 35-60%
+
+        // Also randomize scale slightly
+        config.scale = 0.5 + Math.random() * 1.0;
+      }
 
       // Calculate Y position based on phase
       const screenHeight = this.app.screen.height;
@@ -406,18 +454,18 @@ export class PixiDropletRenderer {
         y = 31;
         droplet.scale.set(t * config.scale);
       } else if (config.phase < 0.2) {
-        // Fall to 30%
+        // Fall quickly to 40% (just above text)
         const t = (config.phase - 0.1) / 0.1;
-        y = 31 + t * (screenHeight * 0.3 - 31);
+        y = 31 + t * (screenHeight * 0.4 - 31);
         droplet.scale.set(config.scale);
       } else if (config.phase < 0.7) {
-        // Slow section (30% to 55%)
+        // Slow section (40% to 60%) - merging with text at center
         const t = (config.phase - 0.2) / 0.5;
-        y = screenHeight * 0.3 + t * (screenHeight * 0.55 - screenHeight * 0.3);
+        y = screenHeight * 0.4 + t * (screenHeight * 0.6 - screenHeight * 0.4);
       } else if (config.phase < 0.8) {
         // Fall to 100%
         const t = (config.phase - 0.7) / 0.1;
-        y = screenHeight * 0.55 + t * (screenHeight - screenHeight * 0.55);
+        y = screenHeight * 0.6 + t * (screenHeight - screenHeight * 0.6);
       } else {
         // Fade out
         const t = (config.phase - 0.8) / 0.2;
