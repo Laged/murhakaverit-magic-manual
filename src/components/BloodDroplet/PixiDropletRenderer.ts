@@ -49,11 +49,16 @@ export class PixiDropletRenderer {
   private elapsedTime = 0;
   private quality: QualitySettings;
   private blurFilter: any = null;
+  private currentQualityTier: QualityTier;
+  private fpsHistory: number[] = [];
+  private lastFpsCheck = 0;
+  private autoAdjustEnabled = true;
 
   constructor(app: Application, PIXI: PixiModule, qualityTier?: QualityTier) {
     this.app = app;
     this.PIXI = PIXI;
-    this.quality = QUALITY_PRESETS[qualityTier ?? this.detectQualityTier()];
+    this.currentQualityTier = qualityTier ?? this.detectQualityTier();
+    this.quality = QUALITY_PRESETS[this.currentQualityTier];
   }
 
   private detectQualityTier(): QualityTier {
@@ -204,9 +209,66 @@ export class PixiDropletRenderer {
     return configs;
   }
 
+  private monitorFPS(ticker: Ticker) {
+    const currentFPS = ticker.FPS;
+    this.fpsHistory.push(currentFPS);
+
+    // Keep only last 60 frames (1 second at 60fps)
+    if (this.fpsHistory.length > 60) {
+      this.fpsHistory.shift();
+    }
+
+    // Check every 2 seconds
+    if (this.elapsedTime - this.lastFpsCheck < 2) return;
+    this.lastFpsCheck = this.elapsedTime;
+
+    // Calculate average FPS
+    const avgFPS =
+      this.fpsHistory.reduce((sum, fps) => sum + fps, 0) /
+      this.fpsHistory.length;
+
+    // Auto-downgrade quality if FPS is consistently low
+    if (avgFPS < 30 && this.currentQualityTier === "high") {
+      console.warn(
+        `[PixiDropletRenderer] Low FPS detected (${avgFPS.toFixed(1)}), downgrading to medium quality`,
+      );
+      this.updateQuality("medium");
+      this.currentQualityTier = "medium";
+      this.fpsHistory = []; // Reset history
+    } else if (avgFPS < 20 && this.currentQualityTier === "medium") {
+      console.warn(
+        `[PixiDropletRenderer] Very low FPS detected (${avgFPS.toFixed(1)}), downgrading to low quality`,
+      );
+      this.updateQuality("low");
+      this.currentQualityTier = "low";
+      this.fpsHistory = []; // Reset history
+    }
+  }
+
+  setAutoAdjust(enabled: boolean) {
+    this.autoAdjustEnabled = enabled;
+  }
+
+  getCurrentFPS(): number {
+    return this.app.ticker.FPS;
+  }
+
+  getAverageFPS(): number {
+    if (this.fpsHistory.length === 0) return 60;
+    return (
+      this.fpsHistory.reduce((sum, fps) => sum + fps, 0) /
+      this.fpsHistory.length
+    );
+  }
+
   private animate(ticker: Ticker) {
     const delta = ticker.deltaTime / 60; // Convert to seconds
     this.elapsedTime += delta;
+
+    // FPS monitoring and auto-adjustment
+    if (this.autoAdjustEnabled) {
+      this.monitorFPS(ticker);
+    }
 
     this.droplets.forEach((droplet, i) => {
       const config = this.configs[i];
