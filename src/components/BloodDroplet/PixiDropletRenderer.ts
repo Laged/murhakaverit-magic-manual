@@ -73,44 +73,71 @@ export class PixiDropletRenderer {
   private createDroplet(scale: number): Graphics {
     const droplet = new this.PIXI.Graphics();
 
-    // Blood droplet shape (approximate SVG path)
-    const width = 59 * scale;
-    const height = 62 * scale;
+    // Blood droplet shape matching SVG path precisely
+    // Original path: m28.443,3.6945c2.45,11.902,6.93,17.65,12.688,25.359,1.9918,2.667,3.2188,5.8992,3.2188,9.4844,0,8.7667-7.1395,15.875-15.906,15.875-8.7667,0-15.844-7.1083-15.844-15.875,0-3.5378,1.0945-6.9015,3.125-9.4844,6.009-7.645,10.407-13.424,12.718-25.36z
+    // ViewBox: 0 0 59 62
+    const w = 59 * scale;
+    const h = 62 * scale;
 
-    droplet.moveTo(width * 0.48, height * 0.06);
+    // Starting point: m28.443,3.6945
+    droplet.moveTo((28.443 / 59) * w, (3.6945 / 62) * h);
+
+    // Right side curve: c2.45,11.902,6.93,17.65,12.688,25.359
     droplet.bezierCurveTo(
-      width * 0.52,
-      height * 0.25,
-      width * 0.62,
-      height * 0.35,
-      width * 0.72,
-      height * 0.47,
+      ((28.443 + 2.45) / 59) * w,
+      ((3.6945 + 11.902) / 62) * h,
+      ((28.443 + 6.93) / 59) * w,
+      ((3.6945 + 17.65) / 62) * h,
+      ((28.443 + 12.688) / 59) * w,
+      ((3.6945 + 25.359) / 62) * h,
     );
+
+    // Bottom right arc segment: c1.9918,2.667,3.2188,5.8992,3.2188,9.4844
+    const x1 = 28.443 + 12.688;
+    const y1 = 3.6945 + 25.359;
     droplet.bezierCurveTo(
-      width * 0.77,
-      height * 0.52,
-      width * 0.78,
-      height * 0.62,
-      width * 0.78,
-      height * 0.72,
+      ((x1 + 1.9918) / 59) * w,
+      ((y1 + 2.667) / 62) * h,
+      ((x1 + 3.2188) / 59) * w,
+      ((y1 + 5.8992) / 62) * h,
+      ((x1 + 3.2188) / 59) * w,
+      ((y1 + 9.4844) / 62) * h,
     );
-    droplet.arc(width * 0.48, height * 0.72, width * 0.3, 0, Math.PI);
+
+    // Bottom arc (approximated with arc): c0,8.7667,-7.1395,15.875,-15.906,15.875
+    // This is actually an elliptical arc for the rounded bottom
+    const bottomCenterX = ((28.443 + 0.344) / 59) * w;
+    const bottomCenterY = ((38.5379 + 8.7667 / 2) / 62) * h;
+    const radiusX = (15.906 / 59) * w;
+    const radiusY = (8.7667 / 62) * h;
+
+    // Arc from right to left (PI to 0)
+    droplet.arc(bottomCenterX, bottomCenterY, radiusX, 0, Math.PI, false);
+
+    // Left side arc segment: c0,-3.5378,1.0945,-6.9015,3.125,-9.4844
+    const x2 = 28.443 - 15.906;
+    const y2 = 38.5379 + 8.7667;
     droplet.bezierCurveTo(
-      width * 0.22,
-      height * 0.62,
-      width * 0.23,
-      height * 0.52,
-      width * 0.28,
-      height * 0.47,
+      ((x2 + 0) / 59) * w,
+      ((y2 - 3.5378) / 62) * h,
+      ((x2 + 1.0945) / 59) * w,
+      ((y2 - 6.9015) / 62) * h,
+      ((x2 + 3.125) / 59) * w,
+      ((y2 - 9.4844) / 62) * h,
     );
+
+    // Left side curve back to start: c6.009,-7.645,10.407,-13.424,12.718,-25.36
+    const x3 = x2 + 3.125;
+    const y3 = y2 - 9.4844;
     droplet.bezierCurveTo(
-      width * 0.38,
-      height * 0.35,
-      width * 0.48,
-      height * 0.25,
-      width * 0.48,
-      height * 0.06,
+      ((x3 + 6.009) / 59) * w,
+      ((y3 - 7.645) / 62) * h,
+      ((x3 + 10.407) / 59) * w,
+      ((y3 - 13.424) / 62) * h,
+      ((x3 + 12.718) / 59) * w,
+      ((y3 - 25.36) / 62) * h,
     );
+
     droplet.fill({ color: 0x880808 });
 
     return droplet;
