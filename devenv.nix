@@ -26,7 +26,7 @@
   '';
 
   scripts.fix.exec = ''
-    biome check --write
+    biome check src --write
   '';
 
   scripts.dev.exec = ''
@@ -47,7 +47,7 @@
 
   enterShell = ''
     hello
-    biome lint
+    biome lint src
   '';
 
   # https://devenv.sh/tasks/

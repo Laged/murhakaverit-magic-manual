@@ -1,11 +1,18 @@
+"use client";
+
+import { useId } from "react";
 import styles from "./SmokeOverlay.module.css";
 
 export default function SmokeOverlay() {
+  const idPrefix = useId();
+  const fadeTopId = `${idPrefix}-fade-top`;
+  const steamFilterId = `${idPrefix}-steam-turbulence`;
+
   return (
     <div className={styles.smoke} aria-hidden="true">
       <svg className={styles.svgContainer} role="presentation">
         <defs>
-          <linearGradient id="fadeTop" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={fadeTopId} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="black" stopOpacity="0" />
             <stop offset="50%" stopColor="black" stopOpacity="0.6" />
             <stop offset="80%" stopColor="black" stopOpacity="0.9" />
@@ -13,7 +20,7 @@ export default function SmokeOverlay() {
           </linearGradient>
 
           <filter
-            id="steamTurbulence"
+            id={steamFilterId}
             x="-50%"
             y="-50%"
             width="200%"
@@ -57,8 +64,8 @@ export default function SmokeOverlay() {
         <rect
           width="100%"
           height="100%"
-          fill="url(#fadeTop)"
-          filter="url(#steamTurbulence)"
+          fill={`url(#${fadeTopId})`}
+          filter={`url(#${steamFilterId})`}
         />
       </svg>
     </div>

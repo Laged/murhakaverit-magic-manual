@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import DropletShape from "./DropletShape";
 
 const BASE_DROPLET_HEIGHT = 62;
@@ -60,6 +60,8 @@ export default function BloodDroplet({
   const backgroundClass = theme === "light" ? "bg-white" : "bg-black";
   const themeStyles = BLOOD_THEME_VARS[theme] as CSSProperties;
   const supportsGooFilter = useSupportsGooFilter();
+  const gooFilterId = useId();
+  const gooFilterUrl = `url(#${gooFilterId})`;
 
   return (
     <div
@@ -76,7 +78,7 @@ export default function BloodDroplet({
         >
           <defs>
             <filter
-              id="goo"
+              id={gooFilterId}
               x="-50%"
               y="-50%"
               width="200%"
@@ -104,9 +106,9 @@ export default function BloodDroplet({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          filter: supportsGooFilter ? "url(#goo)" : "blur(8px) contrast(20)",
+          filter: supportsGooFilter ? gooFilterUrl : "blur(8px) contrast(20)",
           WebkitFilter: supportsGooFilter
-            ? "url(#goo)"
+            ? gooFilterUrl
             : "blur(8px) contrast(20)",
         }}
       >
