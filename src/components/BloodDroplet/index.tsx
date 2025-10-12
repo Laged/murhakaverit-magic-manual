@@ -1,8 +1,27 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState } from "react";
 import DropletShape from "./DropletShape";
 
 const BASE_DROPLET_HEIGHT = 62;
 type BloodDropletTheme = "dark" | "light";
+
+// Hook to detect iOS Safari which has poor SVG filter support
+const useSupportsGooFilter = () => {
+  const [supportsFilter, setSupportsFilter] = useState(true);
+
+  useEffect(() => {
+    // Detect iOS Safari which has buggy feGaussianBlur implementation
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    // iOS Safari has buggy feGaussianBlur implementation
+    setSupportsFilter(!(isIOS && isSafari));
+  }, []);
+
+  return supportsFilter;
+};
 
 const BLOOD_THEME_VARS: Record<BloodDropletTheme, Record<string, string>> = {
   dark: {
@@ -40,42 +59,55 @@ export default function BloodDroplet({
 }: BloodDropletProps) {
   const backgroundClass = theme === "light" ? "bg-white" : "bg-black";
   const themeStyles = BLOOD_THEME_VARS[theme] as CSSProperties;
+  const supportsGooFilter = useSupportsGooFilter();
 
   return (
     <div
       className={`relative h-full w-full overflow-hidden ${backgroundClass}`}
       style={themeStyles}
       data-blood-theme={theme}
+      data-supports-goo={supportsGooFilter}
     >
-      {/* SVG filter definition - defined once */}
-      <svg className="absolute h-0 w-0 pointer-events-none" aria-hidden="true">
-        <defs>
-          <filter
-            id="goo"
-            x="-50%"
-            y="-50%"
-            width="200%"
-            height="200%"
-            colorInterpolationFilters="sRGB"
-          >
-            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
-            <feColorMatrix
-              in="blur"
-              type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
-              result="goo"
-            />
-            <feBlend in="SourceGraphic" in2="goo" />
-          </filter>
-        </defs>
-      </svg>
+      {/* SVG filter definition - only if supported */}
+      {supportsGooFilter && (
+        <svg
+          className="absolute h-0 w-0 pointer-events-none"
+          aria-hidden="true"
+        >
+          <defs>
+            <filter
+              id="goo"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+              colorInterpolationFilters="sRGB"
+            >
+              <feGaussianBlur
+                in="SourceGraphic"
+                stdDeviation="8"
+                result="blur"
+              />
+              <feColorMatrix
+                in="blur"
+                type="matrix"
+                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+                result="goo"
+              />
+              <feBlend in="SourceGraphic" in2="goo" />
+            </filter>
+          </defs>
+        </svg>
+      )}
 
-      {/* Goo layer - all red elements with filter applied */}
+      {/* Goo layer - apply filter conditionally */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          filter: "url(#goo)",
-          WebkitFilter: "url(#goo)",
+          filter: supportsGooFilter ? "url(#goo)" : "blur(8px) contrast(20)",
+          WebkitFilter: supportsGooFilter
+            ? "url(#goo)"
+            : "blur(8px) contrast(20)",
         }}
       >
         <div

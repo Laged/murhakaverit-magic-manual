@@ -1,40 +1,35 @@
 .drop {
-    position: absolute;
-    animation: drop-fall 9s infinite;
-    animation-delay: var(--drop-delay, 0s);
-    top: var(--drop-top0, 0px);
-    left: var(--drop-left, 50%);
-    transform: translateX(-50%);
+  position: absolute;
+  animation: drop-fall 9s infinite;
+  animation-delay: var(--drop-delay, 0s);
+  left: var(--drop-left, 50%);
+  /* Add GPU acceleration hints */
+  will-change: transform;
+  transform: translateX(-50%) translateY(var(--drop-top0, 0px));
 }
 
 @keyframes drop-fall {
-    0% {
-        top: var(--drop-top0, 0px);
-        transform: translateX(-50%) scale(0);
-        animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
-    }
-    10% {
-        top: var(--drop-top0, 0px);
-        transform: translateX(-50%) scale(1);
-        animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
-    }
-    20% {
-        top: var(--drop-top1, 45%);
-        transform: translateX(-50%) scale(1);
-        animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
-    }
-    70% {
-        top: var(--drop-top2, 65%);
-        transform: translateX(-50%) scale(1);
-        animation-timing-function: cubic-bezier(0.42, 0, 1, 1);
-    }
-    80% {
-        top: var(--drop-top3, 100%);
-        transform: translateX(-50%) scale(1);
-        animation-timing-function: linear;
-    }
-    100% {
-        top: var(--drop-top4, 100%);
-        transform: translateX(-50%) scale(1);
-    }
+  0% {
+    transform: translateX(-50%) translateY(var(--drop-top0, 0px)) scale(0);
+    animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
+  }
+  10% {
+    transform: translateX(-50%) translateY(var(--drop-top0, 0px)) scale(1);
+    animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
+  }
+  20% {
+    transform: translateX(-50%) translateY(var(--drop-top1, 30vh)) scale(1);
+    animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  }
+  70% {
+    transform: translateX(-50%) translateY(var(--drop-top2, 55vh)) scale(1);
+    animation-timing-function: cubic-bezier(0.42, 0, 1, 1);
+  }
+  80% {
+    transform: translateX(-50%) translateY(var(--drop-top3, 100vh)) scale(1);
+    animation-timing-function: linear;
+  }
+  100% {
+    transform: translateX(-50%) translateY(var(--drop-top4, 110vh)) scale(1);
+  }
 }

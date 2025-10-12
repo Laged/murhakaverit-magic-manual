@@ -14,6 +14,7 @@ interface DropletShapeProps {
   scale?: number;
   offset?: number;
   delay?: number;
+  isPaused?: boolean;
   onIteration?: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function DropletShape({
   scale = 1,
   offset = 50,
   delay = 0,
+  isPaused = false,
   onIteration,
 }: DropletShapeProps) {
   const height = BASE_DROPLET_HEIGHT * scale;
@@ -33,10 +35,11 @@ export default function DropletShape({
     "--drop-delay": `${delay}s`,
     "--drop-left": `${offset}%`,
     "--drop-top0": `${BASE_DROPLET_HEIGHT / 2 - height / 2}px`,
-    "--drop-top1": `calc(37% - ${height / 2}px)`,
-    "--drop-top2": `calc(65% - ${height / 2}px)`,
-    "--drop-top3": `calc(100% + ${height * 0.3}px)`,
-    "--drop-top4": `calc(100% + ${height * 0.6}px)`,
+    "--drop-top1": `30vh`,
+    "--drop-top2": `55vh`,
+    "--drop-top3": `100vh`,
+    "--drop-top4": `110vh`,
+    animationPlayState: isPaused ? "paused" : "running",
   } as CSSProperties;
 
   return (
