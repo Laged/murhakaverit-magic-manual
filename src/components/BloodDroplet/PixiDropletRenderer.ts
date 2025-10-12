@@ -80,12 +80,16 @@ export class PixiDropletRenderer {
     this.container = new this.PIXI.Container();
     this.app.stage.addChild(this.container);
 
-    // Create goo container (no blur - CSS will handle it)
+    // Create goo container with blur filter restored
     this.gooContainer = new this.PIXI.Container();
     this.container.addChild(this.gooContainer);
 
-    // Note: Blur filter removed - goo effect now handled by CSS blur+contrast wrapper
-    // This allows the red DOM title text to blend with WebGL-rendered elements
+    // Apply blur filter for goo effect (restored)
+    this.blurFilter = new this.PIXI.BlurFilter({
+      strength: this.quality.blurStrength,
+      quality: this.quality.blurQuality,
+    });
+    this.gooContainer.filters = [this.blurFilter];
 
     // Add top bar
     const topBar = this.createBar(0);
@@ -105,11 +109,65 @@ export class PixiDropletRenderer {
     const bottomBar = this.createBar(this.app.screen.height - 62);
     this.gooContainer.addChild(bottomBar);
 
+    // Add red title text (inside goo container so it gets blurred)
+    await this.createTitleText();
+
     // Start animation loop
     this.app.ticker.add(this.animate.bind(this));
 
     // Setup resize handler
     this.setupResizeHandler();
+  }
+
+  private async createTitleText() {
+    // Load Creepster font dynamically
+    const fontUrl =
+      "https://fonts.googleapis.com/css2?family=Creepster&display=swap";
+    await this.loadWebFont(fontUrl);
+
+    const titleText = new this.PIXI.Text({
+      text: "murha-\nkaverit",
+      style: {
+        fontFamily: "Creepster, cursive",
+        fontSize: this.calculateTitleFontSize(),
+        fill: 0x880808,
+        align: "center",
+        lineHeight: 0.8 * this.calculateTitleFontSize(),
+        fontWeight: "900",
+        letterSpacing: 0,
+        stroke: { color: 0x880808, width: 1 },
+      },
+    });
+
+    titleText.anchor.set(0.5);
+    titleText.x = this.app.screen.width / 2;
+    titleText.y = this.app.screen.height / 2;
+
+    this.gooContainer.addChild(titleText);
+  }
+
+  private calculateTitleFontSize(): number {
+    // clamp(3rem, 30vw, 15rem)
+    const vw = this.app.screen.width * 0.3;
+    const min = 48; // 3rem ≈ 48px
+    const max = 240; // 15rem ≈ 240px
+    return Math.min(Math.max(vw, min), max);
+  }
+
+  private async loadWebFont(url: string) {
+    // Create link element to load Google Font
+    if (typeof document !== "undefined") {
+      const existingLink = document.querySelector(`link[href="${url}"]`);
+      if (existingLink) return;
+
+      const link = document.createElement("link");
+      link.href = url;
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+
+      // Wait for font to load
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
   }
 
   private setupResizeHandler() {
@@ -352,8 +410,11 @@ export class PixiDropletRenderer {
   updateQuality(qualityTier: QualityTier) {
     this.quality = QUALITY_PRESETS[qualityTier];
 
-    // Note: Blur filter no longer used (CSS handles goo effect)
-    // Quality tiers kept for potential future optimizations
+    // Update blur filter
+    if (this.blurFilter) {
+      this.blurFilter.strength = this.quality.blurStrength;
+      this.blurFilter.quality = this.quality.blurQuality;
+    }
   }
 
   updateDropletCount(count: number, scaleMultiplier: number) {
