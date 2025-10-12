@@ -80,16 +80,12 @@ export class PixiDropletRenderer {
     this.container = new this.PIXI.Container();
     this.app.stage.addChild(this.container);
 
-    // Create goo container with blur filter
+    // Create goo container (no blur - CSS will handle it)
     this.gooContainer = new this.PIXI.Container();
     this.container.addChild(this.gooContainer);
 
-    // Apply adaptive blur filter for goo effect
-    this.blurFilter = new this.PIXI.BlurFilter({
-      strength: this.quality.blurStrength,
-      quality: this.quality.blurQuality,
-    });
-    this.gooContainer.filters = [this.blurFilter];
+    // Note: Blur filter removed - goo effect now handled by CSS blur+contrast wrapper
+    // This allows the red DOM title text to blend with WebGL-rendered elements
 
     // Add top bar
     const topBar = this.createBar(0);
@@ -356,11 +352,8 @@ export class PixiDropletRenderer {
   updateQuality(qualityTier: QualityTier) {
     this.quality = QUALITY_PRESETS[qualityTier];
 
-    // Update blur filter
-    if (this.blurFilter) {
-      this.blurFilter.strength = this.quality.blurStrength;
-      this.blurFilter.quality = this.quality.blurQuality;
-    }
+    // Note: Blur filter no longer used (CSS handles goo effect)
+    // Quality tiers kept for potential future optimizations
   }
 
   updateDropletCount(count: number, scaleMultiplier: number) {

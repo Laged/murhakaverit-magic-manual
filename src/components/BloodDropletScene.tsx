@@ -244,12 +244,30 @@ export default function BloodDropletScene({
       ) : hasWebGL ? (
         // WebGL-based rendering with PixiJS
         <>
-          <PixiDropletCanvas
-            theme={theme}
-            dropletCount={dropletCount}
-            scaleMultiplier={scaleMultiplier}
-            isPaused={!isVisible}
-          />
+          {/* Goo layer: Canvas + Red title with blur/contrast effect */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              filter: "blur(8px) contrast(20)",
+              WebkitFilter: "blur(8px) contrast(20)",
+            }}
+          >
+            <PixiDropletCanvas
+              theme={theme}
+              dropletCount={dropletCount}
+              scaleMultiplier={scaleMultiplier}
+              isPaused={!isVisible}
+            />
+            {/* Red title layer that blends with PixiJS droplets */}
+            <div className={styles.titleGoo}>
+              <h1>
+                murha-
+                <br />
+                kaverit
+              </h1>
+            </div>
+          </div>
+          {/* White crisp overlay title (outside blur) */}
           <div className={styles.titleCrisp}>
             <h1>
               murha-
