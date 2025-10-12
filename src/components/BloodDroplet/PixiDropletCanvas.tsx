@@ -2,6 +2,7 @@
 
 import type { Application } from "pixi.js";
 import { useEffect, useRef, useState } from "react";
+import DebugOverlay from "./DebugOverlay";
 import { PixiDropletRenderer } from "./PixiDropletRenderer";
 
 interface PixiDropletCanvasProps {
@@ -94,10 +95,13 @@ export default function PixiDropletCanvas({
   }, [isPaused]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 1 }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
+      <DebugOverlay renderer={rendererRef.current} />
+    </>
   );
 }
