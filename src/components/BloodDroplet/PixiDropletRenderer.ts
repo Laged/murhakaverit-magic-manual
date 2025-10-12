@@ -48,6 +48,7 @@ export class PixiDropletRenderer {
   private configs: DropletConfig[] = [];
   private elapsedTime = 0;
   private quality: QualitySettings;
+  // biome-ignore lint/suspicious/noExplicitAny: BlurFilter type is from dynamically imported PixiJS
   private blurFilter: any = null;
   private currentQualityTier: QualityTier;
   private fpsHistory: number[] = [];
@@ -110,6 +111,36 @@ export class PixiDropletRenderer {
 
     // Start animation loop
     this.app.ticker.add(this.animate.bind(this));
+
+    // Setup resize handler
+    this.setupResizeHandler();
+  }
+
+  private setupResizeHandler() {
+    // PixiJS Application already handles canvas resize via resizeTo option
+    // We just need to update our bar positions when screen size changes
+    const onResize = () => {
+      if (!this.gooContainer) return;
+
+      // Update bottom bar position
+      const bars = this.gooContainer.children.filter(
+        (child) => child !== this.droplets[0]?.parent,
+      );
+      const bottomBar = bars[bars.length - 1] as Graphics;
+      if (bottomBar) {
+        bottomBar.clear();
+        bottomBar.rect(
+          -20,
+          this.app.screen.height - 62,
+          this.app.screen.width + 40,
+          62,
+        );
+        bottomBar.fill({ color: 0x880808 });
+      }
+    };
+
+    // Listen to PixiJS renderer resize
+    this.app.renderer.on("resize", onResize);
   }
 
   private createBar(y: number): Graphics {
@@ -158,9 +189,9 @@ export class PixiDropletRenderer {
     const bottomCenterX = ((28.443 + 0.344) / 59) * w;
     const bottomCenterY = ((38.5379 + 8.7667 / 2) / 62) * h;
     const radiusX = (15.906 / 59) * w;
-    const radiusY = (8.7667 / 62) * h;
 
     // Arc from right to left (PI to 0)
+    // Note: Using circular arc as approximation (PixiJS arc doesn't support elliptical)
     droplet.arc(bottomCenterX, bottomCenterY, radiusX, 0, Math.PI, false);
 
     // Left side arc segment: c0,-3.5378,1.0945,-6.9015,3.125,-9.4844
@@ -341,6 +372,9 @@ export class PixiDropletRenderer {
   destroy() {
     this.app.ticker.remove(this.animate.bind(this));
 
+    // Remove resize listener
+    this.app.renderer.off("resize");
+
     if (this.container) {
       this.app.stage.removeChild(this.container);
       this.container.destroy({ children: true });
@@ -350,5 +384,6 @@ export class PixiDropletRenderer {
     this.droplets = [];
     this.configs = [];
     this.elapsedTime = 0;
+    this.fpsHistory = [];
   }
 }
