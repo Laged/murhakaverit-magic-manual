@@ -33,6 +33,10 @@
     bun run dev
   '';
 
+  scripts.tunnel.exec = ''
+    NIXPKGS_ALLOW_UNFREE=1 nix run --impure nixpkgs#ngrok -- http 3000
+  '';
+
   scripts.build.exec = ''
     bun run build
   '';

@@ -1,8 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import BloodDroplet, { DropletShape } from "@/components/BloodDroplet";
+import { DropletShape } from "@/components/BloodDroplet";
 import styles from "@/components/BloodDroplet/BloodDroplet.module.css";
+import CrispBloodDroplet from "@/components/BloodDroplet/CrispBloodDroplet";
+import { useWebGLSupport } from "@/hooks/useWebGLSupport";
+
+const PixiDropletCanvas = dynamic(
+  () => import("@/components/BloodDroplet/PixiDropletCanvas"),
+  { ssr: false },
+);
 
 // Droplets fall centered over "MURHA" (5 chars) - narrower spread
 const BASE_OFFSETS = [35, 40, 45, 50, 55, 60, 65];
@@ -78,6 +86,7 @@ interface BloodDropletSceneProps {
 export default function BloodDropletScene({
   theme = "dark",
 }: BloodDropletSceneProps) {
+  const { hasWebGL, isChecking } = useWebGLSupport();
   const [scaleMultiplier, setScaleMultiplier] = useState(1);
   const [dropletCount, setDropletCount] = useState(7);
   const [droplets, setDroplets] = useState<DropletConfig[]>(BASE_DROPLETS);
@@ -189,7 +198,7 @@ export default function BloodDropletScene({
         className={`w-screen ${containerBgClass}`}
         style={{ height: "95vh" }}
       >
-        <BloodDroplet
+        <CrispBloodDroplet
           theme={theme}
           gooChildren={
             <div className={styles.titleGoo} style={{ opacity: 0.5 }}>
@@ -214,39 +223,16 @@ export default function BloodDropletScene({
     );
   }
 
+  // Progressive enhancement: WebGL → CSS → Static
   return (
     <div
       ref={containerRef}
       className={`w-screen ${containerBgClass}`}
       style={{ height: "95vh" }}
     >
-      <BloodDroplet
-        theme={theme}
-        gooChildren={
-          <>
-            {(hasHydrated ? droplets : BASE_DROPLETS).map((droplet, index) => (
-              <DropletShape
-                key={droplet.id}
-                offset={droplet.offset}
-                delay={droplet.delay}
-                scale={droplet.scale}
-                isPaused={!isVisible}
-                onIteration={index === 0 ? reshuffleDroplets : undefined}
-              />
-            ))}
-            <div className={styles.titleGoo}>
-              <h1>
-                murha-
-                <br />
-                kaverit
-              </h1>
-            </div>
-            {/* Debug lines for slow section */}
-            {/* <div style={{ position: 'absolute', top: '37%', left: 0, right: 0, height: '2px', background: 'cyan', zIndex: 100 }} /> */}
-            {/* <div style={{ position: 'absolute', top: '65%', left: 0, right: 0, height: '2px', background: 'cyan', zIndex: 100 }} /> */}
-          </>
-        }
-        crispChildren={
+      {isChecking ? (
+        // Loading state while checking WebGL support
+        <div className="flex items-center justify-center h-full">
           <div className={styles.titleCrisp}>
             <h1>
               murha-
@@ -254,8 +240,54 @@ export default function BloodDropletScene({
               kaverit
             </h1>
           </div>
-        }
-      />
+        </div>
+      ) : hasWebGL ? (
+        // WebGL-based rendering with PixiJS
+        // Both red goo title and white crisp title rendered in WebGL
+        <PixiDropletCanvas
+          theme={theme}
+          dropletCount={dropletCount}
+          scaleMultiplier={scaleMultiplier}
+          isPaused={!isVisible}
+        />
+      ) : (
+        // CSS-based fallback rendering
+        <CrispBloodDroplet
+          theme={theme}
+          gooChildren={
+            <>
+              {(hasHydrated ? droplets : BASE_DROPLETS).map(
+                (droplet, index) => (
+                  <DropletShape
+                    key={droplet.id}
+                    offset={droplet.offset}
+                    delay={droplet.delay}
+                    scale={droplet.scale}
+                    isPaused={!isVisible}
+                    onIteration={index === 0 ? reshuffleDroplets : undefined}
+                  />
+                ),
+              )}
+              <div className={styles.titleGoo}>
+                <h1>
+                  murha-
+                  <br />
+                  kaverit
+                </h1>
+              </div>
+            </>
+          }
+          crispChildren={
+            <div className={styles.titleCrisp}>
+              <h1>
+                murha-
+                <br />
+                kaverit
+              </h1>
+            </div>
+          }
+        />
+      )}
     </div>
   );
 }

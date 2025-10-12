@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Murhakaverit Magic Manual
+
+A high-performance Next.js website featuring WebGL-accelerated blood droplet animations using PixiJS.
+
+## Features
+
+- 🎨 **WebGL Blood Droplet Animations** - Hardware-accelerated particle system
+- 📱 **Mobile-Optimized** - Adaptive quality and performance monitoring
+- ♿ **Accessible** - Progressive enhancement with graceful fallbacks
+- 🎭 **Dark/Light Themes** - Seamless theme switching
+- 🔧 **Developer Tools** - Built-in FPS monitoring in development mode
+
+## Tech Stack
+
+- **Next.js 15.5.4** - React framework with Turbopack
+- **PixiJS 8.7.2** - WebGL 2D rendering library
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Tailwind CSS 4** - Styling
+- **Biome** - Linting and formatting
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+ or Bun
+- NixOS users: See `devenv.nix` for development environment setup
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+```
+
+### Development
+
+```bash
+bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `bun run dev` - Start development server with Turbopack
+- `bun run build` - Build for production
+- `bun run start` - Start production server
+- `bun run lint` - Check code with Biome
+- `bun run lint:fix` - Auto-fix lint issues
+- `bun run format` - Format code with Biome
+- `bun run type-check` - Run TypeScript compiler check
+- `bun run analyze` - Analyze bundle size
+- `bun run perf` - Build and start for performance testing
 
-## Learn More
+## Performance
 
-To learn more about Next.js, take a look at the following resources:
+This project uses WebGL rendering via PixiJS to achieve 60fps animations even on mobile devices. See [PIXI_IMPLEMENTATION.md](./PIXI_IMPLEMENTATION.md) for detailed performance documentation.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Progressive Enhancement
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application automatically selects the best rendering method based on device capabilities:
 
-## Deploy on Vercel
+1. **WebGL (PixiJS)** - For devices with WebGL support (preferred)
+2. **CSS Animations** - Fallback for devices without WebGL
+3. **Static Title** - For users with reduced motion preference
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Debug Mode
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+In development mode, a real-time FPS overlay appears in the top-right corner showing:
+- Current FPS
+- Average FPS
+- Performance status (Good/Fair/Poor)
+
+## Browser Support
+
+- ✅ Chrome 56+
+- ✅ Firefox 51+
+- ✅ Safari 11+
+- ✅ Edge 79+
+- ✅ iOS Safari 11+
+- ✅ Chrome for Android
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx              # Main entry point
+│   └── globals.css           # Global styles
+├── components/
+│   ├── BloodDroplet/
+│   │   ├── PixiDropletCanvas.tsx       # WebGL renderer wrapper
+│   │   ├── PixiDropletRenderer.ts      # Core rendering logic
+│   │   ├── DebugOverlay.tsx           # FPS monitor
+│   │   └── DropletShape.tsx           # CSS fallback
+│   └── GraniittiSauna/
+│       └── index.tsx         # Sauna card component
+└── hooks/
+    └── useWebGLSupport.ts    # WebGL detection
+```
+
+## Documentation
+
+- [PIXI_IMPLEMENTATION.md](./PIXI_IMPLEMENTATION.md) - PixiJS implementation details and performance metrics
+- [PerformanceOptimizations.md](./PerformanceOptimizations.md) - Original optimization plan
+
+## License
+
+Private project.

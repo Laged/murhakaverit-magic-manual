@@ -1,186 +1,185 @@
 @import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Sans:wght@400;600&display=swap");
 
 .section {
-    padding: 0 clamp(1.5rem, 5vw, 4rem) clamp(3rem, 6vw, 5rem);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
+  padding: 0 clamp(1.5rem, 5vw, 4rem) clamp(3rem, 6vw, 5rem);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
 .smokeContainer {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .cardWrapper {
-    position: relative;
-    z-index: 2;
-    max-width: 720px;
-    width: 100%;
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+  width: 100%;
 }
 
 .sectionLight {
-    background: #880808;
+  background: #880808;
 }
 
 .sectionDark {
-    background: #0d0d0d;
+  background: #0d0d0d;
 }
 
 .card {
-    background: var(--sauna-card-bg, #ffffff);
-    border: 6px solid var(--sauna-card-border, #000000);
-    box-shadow: 14px 14px 0 var(--sauna-card-shadow, #000000);
-    padding: clamp(2.5rem, 5vw, 4rem) clamp(1.25rem, 5vw, 4rem);
-    position: relative;
-    overflow: hidden;
-    max-width: 720px;
-    width: 100%;
+  background: var(--sauna-card-bg, #ffffff);
+  border: 6px solid var(--sauna-card-border, #000000);
+  box-shadow: 14px 14px 0 var(--sauna-card-shadow, #000000);
+  padding: clamp(2.5rem, 5vw, 4rem) clamp(1.25rem, 5vw, 4rem);
+  position: relative;
+  overflow: hidden;
+  max-width: 720px;
+  width: 100%;
 }
 
 .cardContent {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: column;
-    gap: clamp(1.5rem, 3vw, 2.5rem);
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
 }
 
-
 .themeLight {
-    --sauna-card-bg: #ffffff;
-    --sauna-card-border: #000000;
-    --sauna-card-shadow: #000000;
-    --sauna-heading-color: #000000;
-    --sauna-body-color: #000000;
-    --sauna-detail-label-color: #000000;
-    --sauna-detail-value-color: #000000;
-    --sauna-button-fg: #000000;
-    --sauna-button-bg: transparent;
-    --sauna-button-border: #000000;
-    --sauna-button-hover-bg: #000000;
-    --sauna-button-hover-fg: #ffffff;
-    --sauna-button-hover-shadow: #000000;
+  --sauna-card-bg: #ffffff;
+  --sauna-card-border: #000000;
+  --sauna-card-shadow: #000000;
+  --sauna-heading-color: #000000;
+  --sauna-body-color: #000000;
+  --sauna-detail-label-color: #000000;
+  --sauna-detail-value-color: #000000;
+  --sauna-button-fg: #000000;
+  --sauna-button-bg: transparent;
+  --sauna-button-border: #000000;
+  --sauna-button-hover-bg: #000000;
+  --sauna-button-hover-fg: #ffffff;
+  --sauna-button-hover-shadow: #000000;
 }
 
 .themeDark {
-    --sauna-card-bg: #0d0d0d;
-    --sauna-card-border: #f5f5f5;
-    --sauna-card-shadow: #f5f5f5;
-    --sauna-heading-color: #f7f7f7;
-    --sauna-body-color: #dedede;
-    --sauna-detail-label-color: #f6f6f6;
-    --sauna-detail-value-color: #dedede;
-    --sauna-button-fg: #f5f5f5;
-    --sauna-button-bg: transparent;
-    --sauna-button-border: #f5f5f5;
-    --sauna-button-hover-bg: #f5f5f5;
-    --sauna-button-hover-fg: #111111;
-    --sauna-button-hover-shadow: #bb1b1b;
+  --sauna-card-bg: #0d0d0d;
+  --sauna-card-border: #f5f5f5;
+  --sauna-card-shadow: #f5f5f5;
+  --sauna-heading-color: #f7f7f7;
+  --sauna-body-color: #dedede;
+  --sauna-detail-label-color: #f6f6f6;
+  --sauna-detail-value-color: #dedede;
+  --sauna-button-fg: #f5f5f5;
+  --sauna-button-bg: transparent;
+  --sauna-button-border: #f5f5f5;
+  --sauna-button-hover-bg: #f5f5f5;
+  --sauna-button-hover-fg: #111111;
+  --sauna-button-hover-shadow: #bb1b1b;
 }
 
 .header {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(1rem, 5vh, 3rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 5vh, 3rem);
 }
 
 .heading {
-    font-family: "Barlow Condensed", sans-serif;
-    font-weight: 900;
-    font-size: clamp(2.25rem, 5vw, 4.3rem);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1;
-    color: var(--sauna-heading-color, #000000);
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 900;
+  font-size: clamp(2.25rem, 5vw, 4.3rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--sauna-heading-color, #000000);
 }
 
 .body {
-    font-family: "IBM Plex Sans", sans-serif;
-    font-size: clamp(1.05rem, 2.4vw, 1.35rem);
-    line-height: 1.65;
-    color: var(--sauna-body-color, #000000);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  line-height: 1.65;
+  color: var(--sauna-body-color, #000000);
 }
 
 .detailRow {
-    display: flex;
-    flex-direction: column;
-    gap: 0.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
 }
 
 .detailLabel {
-    font-family: "Barlow Condensed", sans-serif;
-    font-weight: 900;
-    letter-spacing: 0.06em;
-    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-    text-transform: uppercase;
-    color: var(--sauna-detail-label-color, #000000);
-    line-height: 1;
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  text-transform: uppercase;
+  color: var(--sauna-detail-label-color, #000000);
+  line-height: 1;
 }
 
 .detailValue {
-    font-family: "IBM Plex Sans", sans-serif;
-    font-size: clamp(1.05rem, 2.3vw, 1.3rem);
-    color: var(--sauna-detail-value-color, #000000);
-    line-height: 1.2;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: clamp(1.05rem, 2.3vw, 1.3rem);
+  color: var(--sauna-detail-value-color, #000000);
+  line-height: 1.2;
 }
 
 .externalLink {
-    color: inherit;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    transition: opacity 0.2s ease;
-    font-size: 0.9em;
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: opacity 0.2s ease;
+  font-size: 0.9em;
 }
 
 .externalLink:hover,
 .externalLink:focus-visible {
-    opacity: 0.7;
+  opacity: 0.7;
 }
 
 .externalLink:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .buttonWrap {
-    display: flex;
-    justify-content: flex-start;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .button {
-    font-family: "Barlow Condensed", sans-serif;
-    font-weight: 900;
-    text-transform: uppercase;
-    border: 3px solid var(--sauna-button-border, #000000);
-    background: var(--sauna-button-bg, transparent);
-    color: var(--sauna-button-fg, #000000);
-    padding: 0.9rem 2.4rem;
-    letter-spacing: 0.08em;
-    font-size: clamp(1rem, 2.2vw, 1.25rem);
-    cursor: pointer;
-    transition:
-        background 120ms ease,
-        transform 120ms ease,
-        box-shadow 120ms ease;
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  border: 3px solid var(--sauna-button-border, #000000);
+  background: var(--sauna-button-bg, transparent);
+  color: var(--sauna-button-fg, #000000);
+  padding: 0.9rem 2.4rem;
+  letter-spacing: 0.08em;
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .button:hover,
 .button:focus-visible {
-    background: #880808;
-    color: #ffffff;
-    box-shadow: 8px 8px 0 var(--sauna-button-hover-shadow, #000000);
-    transform: translate(-2px, -2px);
+  background: #880808;
+  color: #ffffff;
+  box-shadow: 8px 8px 0 var(--sauna-button-hover-shadow, #000000);
+  transform: translate(-2px, -2px);
 }
 
 .button:focus-visible {
-    outline: 3px solid var(--sauna-button-border, #000000);
-    outline-offset: 4px;
+  outline: 3px solid var(--sauna-button-border, #000000);
+  outline-offset: 4px;
 }
