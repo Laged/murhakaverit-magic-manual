@@ -2,25 +2,38 @@
 
 import type { Application } from "pixi.js";
 import { useEffect, useRef, useState } from "react";
+import type { DropletSeed } from "./dropletTypes";
 import { PixiDropletRenderer } from "./PixiDropletRenderer";
 
 interface PixiDropletCanvasProps {
   theme: "dark" | "light";
-  dropletCount: number;
-  scaleMultiplier: number;
+  droplets: DropletSeed[];
   isPaused?: boolean;
+  onLoop?: () => void;
 }
 
 export default function PixiDropletCanvas({
   theme,
-  dropletCount,
-  scaleMultiplier,
+  droplets,
   isPaused = false,
+  onLoop,
 }: PixiDropletCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const appRef = useRef<Application | null>(null);
   const rendererRef = useRef<PixiDropletRenderer | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const initialDropletsRef = useRef(droplets);
+  const loopCallbackRef = useRef(onLoop);
+
+  useEffect(() => {
+    loopCallbackRef.current = onLoop;
+  }, [onLoop]);
+
+  useEffect(() => {
+    if (!isReady) {
+      initialDropletsRef.current = droplets;
+    }
+  }, [droplets, isReady]);
 
   // Initialize PixiJS Application
   useEffect(() => {
@@ -46,8 +59,14 @@ export default function PixiDropletCanvas({
       appRef.current = app;
 
       // Create renderer
-      const renderer = new PixiDropletRenderer(app, PIXI);
-      await renderer.init(dropletCount, scaleMultiplier);
+      const renderer = new PixiDropletRenderer(app, PIXI, {
+        onLoop: () => {
+          if (typeof loopCallbackRef.current === "function") {
+            loopCallbackRef.current();
+          }
+        },
+      });
+      await renderer.init(initialDropletsRef.current);
       rendererRef.current = renderer;
 
       setIsReady(true);
@@ -66,14 +85,14 @@ export default function PixiDropletCanvas({
         appRef.current = null;
       }
     };
-  }, [dropletCount, scaleMultiplier]);
+  }, []);
 
-  // Update droplet count when changed
+  // Update droplet seeds when changed
   useEffect(() => {
     if (!isReady || !rendererRef.current) return;
 
-    rendererRef.current.updateDropletCount(dropletCount, scaleMultiplier);
-  }, [dropletCount, scaleMultiplier, isReady]);
+    rendererRef.current.updateDroplets(droplets);
+  }, [droplets, isReady]);
 
   // Update theme
   useEffect(() => {

@@ -1,11 +1,14 @@
-import type { Application, Container, Graphics, Ticker } from "pixi.js";
+import type { Application, Container, Graphics, Text, Ticker } from "pixi.js";
+import { DROPLET_DURATION } from "./dropletConfig";
+import type { DropletSeed } from "./dropletTypes";
 
-interface DropletConfig {
-  x: number; // Position (0-1, percentage)
-  speed: number; // Fall speed
-  scale: number; // Size multiplier
-  delay: number; // Initial delay in seconds
-  phase: number; // Animation phase (0-1)
+interface InternalDropletState {
+  graphic: Graphics;
+  delay: number;
+  offset: number; // percentage 0-100
+  scale: number;
+  phase: number;
+  phaseOffset: number;
 }
 
 type QualityTier = "low" | "medium" | "high";
@@ -13,24 +16,20 @@ type QualityTier = "low" | "medium" | "high";
 interface QualitySettings {
   blurStrength: number;
   blurQuality: number;
-  dropletDetail: number; // Multiplier for bezier curve precision
 }
 
 const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
   low: {
     blurStrength: 6,
     blurQuality: 2,
-    dropletDetail: 0.8,
   },
   medium: {
     blurStrength: 8,
     blurQuality: 3,
-    dropletDetail: 1.0,
   },
   high: {
     blurStrength: 10,
     blurQuality: 4,
-    dropletDetail: 1.0,
   },
 };
 
@@ -44,8 +43,7 @@ export class PixiDropletRenderer {
   private PIXI: PixiModule;
   private container: Container | null = null;
   private gooContainer: Container | null = null;
-  private droplets: Graphics[] = [];
-  private configs: DropletConfig[] = [];
+  private dropletStates: InternalDropletState[] = [];
   private elapsedTime = 0;
   private quality: QualitySettings;
   // biome-ignore lint/suspicious/noExplicitAny: BlurFilter type is from dynamically imported PixiJS
@@ -54,12 +52,28 @@ export class PixiDropletRenderer {
   private fpsHistory: number[] = [];
   private lastFpsCheck = 0;
   private autoAdjustEnabled = true;
+  private loopCallback?: () => void;
+  private durationSeconds = DROPLET_DURATION;
+  private topBar: Graphics | null = null;
+  private bottomBar: Graphics | null = null;
+  private titleText: Text | null = null;
+  private titleIntroDuration = 1.2;
+  private titleIntroElapsed = 0;
+  private titleIntroActive = false;
+  private animateFn: (ticker: Ticker) => void;
+  private resizeHandler?: () => void;
 
-  constructor(app: Application, PIXI: PixiModule, qualityTier?: QualityTier) {
+  constructor(
+    app: Application,
+    PIXI: PixiModule,
+    options?: { qualityTier?: QualityTier; onLoop?: () => void },
+  ) {
     this.app = app;
     this.PIXI = PIXI;
-    this.currentQualityTier = qualityTier ?? this.detectQualityTier();
+    this.currentQualityTier = options?.qualityTier ?? this.detectQualityTier();
     this.quality = QUALITY_PRESETS[this.currentQualityTier];
+    this.loopCallback = options?.onLoop;
+    this.animateFn = this.animate.bind(this);
   }
 
   private detectQualityTier(): QualityTier {
@@ -75,7 +89,7 @@ export class PixiDropletRenderer {
     return "high";
   }
 
-  async init(dropletCount: number, scaleMultiplier: number) {
+  async init(seeds: DropletSeed[]) {
     // Create main container
     const container = new this.PIXI.Container();
     this.container = container;
@@ -149,27 +163,22 @@ export class PixiDropletRenderer {
 
     // Add top bar
     const topBar = this.createBar(0);
+    this.topBar = topBar;
     gooContainer.addChild(topBar);
-
-    // Generate droplet configurations
-    this.configs = this.generateDropletConfigs(dropletCount);
-
-    // Create droplet graphics
-    for (const config of this.configs) {
-      const droplet = this.createDroplet(config.scale * scaleMultiplier);
-      gooContainer.addChild(droplet);
-      this.droplets.push(droplet);
-    }
 
     // Add bottom bar
     const bottomBar = this.createBar(this.app.screen.height - 62);
+    this.bottomBar = bottomBar;
     gooContainer.addChild(bottomBar);
 
     // Add red title text (inside goo container so it gets blurred)
     await this.createTitleText();
 
+    // Seed initial droplets
+    this.applyDropletSeeds(seeds);
+
     // Start animation loop
-    this.app.ticker.add(this.animate.bind(this));
+    this.app.ticker.add(this.animateFn);
 
     // Setup resize handler
     this.setupResizeHandler();
@@ -181,19 +190,32 @@ export class PixiDropletRenderer {
       "https://fonts.googleapis.com/css2?family=Creepster&display=swap";
     await this.loadWebFont(fontUrl);
 
+    const fontSize = this.calculateTitleFontSize();
+    const letterSpacing = this.calculateLetterSpacing(fontSize);
+    const strokeWidth = this.calculateStrokeWidth(fontSize);
+
+    const devicePixelRatio =
+      typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+
     const titleText = new this.PIXI.Text({
       text: "murha-\nkaverit",
       style: {
         fontFamily: "Creepster, cursive",
-        fontSize: this.calculateTitleFontSize(),
+        fontSize,
         fill: 0xffffff, // White - will be tinted to #880808 by filter
         align: "center",
-        lineHeight: 0.8 * this.calculateTitleFontSize(),
+        lineHeight: 0.8 * fontSize,
         fontWeight: "900",
-        letterSpacing: 0,
-        stroke: { color: 0xffffff, width: 1 },
+        letterSpacing,
+        stroke: { color: 0xffffff, width: strokeWidth },
+        padding: strokeWidth * 2,
       },
     });
+
+    titleText.roundPixels = true;
+    titleText.resolution = devicePixelRatio;
+    titleText.scale.set(0.88);
+    titleText.alpha = 0;
 
     titleText.anchor.set(0.5);
     titleText.x = this.app.screen.width / 2;
@@ -204,6 +226,9 @@ export class PixiDropletRenderer {
     }
 
     this.gooContainer.addChild(titleText);
+    this.titleText = titleText;
+    this.titleIntroElapsed = 0;
+    this.titleIntroActive = true;
   }
 
   private calculateTitleFontSize(): number {
@@ -212,6 +237,16 @@ export class PixiDropletRenderer {
     const min = 48; // 3rem ≈ 48px
     const max = 240; // 15rem ≈ 240px
     return Math.min(Math.max(vw, min), max);
+  }
+
+  private calculateLetterSpacing(fontSize: number): number {
+    const preferred = this.app.screen.width * 0.005; // 0.5vw
+    const max = fontSize * 0.35; // 0.35em
+    return Math.min(Math.max(0, preferred), max);
+  }
+
+  private calculateStrokeWidth(fontSize: number): number {
+    return Math.max(2, fontSize * 0.03);
   }
 
   private async loadWebFont(url: string) {
@@ -236,24 +271,26 @@ export class PixiDropletRenderer {
     const onResize = () => {
       if (!this.gooContainer) return;
 
-      // Update bottom bar position
-      const bars = this.gooContainer.children.filter(
-        (child) => child !== this.droplets[0]?.parent,
-      );
-      const bottomBar = bars[bars.length - 1] as Graphics;
-      if (bottomBar) {
-        bottomBar.clear();
-        bottomBar.rect(
+      if (this.bottomBar) {
+        this.bottomBar.clear();
+        this.bottomBar.rect(
           -20,
           this.app.screen.height - 62,
           this.app.screen.width + 40,
           62,
         );
-        bottomBar.fill({ color: 0x880808 });
+        this.bottomBar.fill({ color: 0xffffff });
+      }
+
+      if (this.topBar) {
+        this.topBar.clear();
+        this.topBar.rect(-20, 0, this.app.screen.width + 40, 62);
+        this.topBar.fill({ color: 0xffffff });
       }
     };
 
     // Listen to PixiJS renderer resize
+    this.resizeHandler = onResize;
     this.app.renderer.on("resize", onResize);
   }
 
@@ -264,20 +301,16 @@ export class PixiDropletRenderer {
     return bar;
   }
 
-  private createDroplet(scale: number): Graphics {
-    const droplet = new this.PIXI.Graphics();
+  private drawDroplet(graphic: Graphics, scale: number) {
+    graphic.clear();
 
     // Blood droplet shape matching SVG path precisely
-    // Original path: m28.443,3.6945c2.45,11.902,6.93,17.65,12.688,25.359,1.9918,2.667,3.2188,5.8992,3.2188,9.4844,0,8.7667-7.1395,15.875-15.906,15.875-8.7667,0-15.844-7.1083-15.844-15.875,0-3.5378,1.0945-6.9015,3.125-9.4844,6.009-7.645,10.407-13.424,12.718-25.36z
-    // ViewBox: 0 0 59 62
     const w = 59 * scale;
     const h = 62 * scale;
 
-    // Starting point: m28.443,3.6945
-    droplet.moveTo((28.443 / 59) * w, (3.6945 / 62) * h);
+    graphic.moveTo((28.443 / 59) * w, (3.6945 / 62) * h);
 
-    // Right side curve: c2.45,11.902,6.93,17.65,12.688,25.359
-    droplet.bezierCurveTo(
+    graphic.bezierCurveTo(
       ((28.443 + 2.45) / 59) * w,
       ((3.6945 + 11.902) / 62) * h,
       ((28.443 + 6.93) / 59) * w,
@@ -286,10 +319,9 @@ export class PixiDropletRenderer {
       ((3.6945 + 25.359) / 62) * h,
     );
 
-    // Bottom right arc segment: c1.9918,2.667,3.2188,5.8992,3.2188,9.4844
     const x1 = 28.443 + 12.688;
     const y1 = 3.6945 + 25.359;
-    droplet.bezierCurveTo(
+    graphic.bezierCurveTo(
       ((x1 + 1.9918) / 59) * w,
       ((y1 + 2.667) / 62) * h,
       ((x1 + 3.2188) / 59) * w,
@@ -298,20 +330,14 @@ export class PixiDropletRenderer {
       ((y1 + 9.4844) / 62) * h,
     );
 
-    // Bottom arc (approximated with arc): c0,8.7667,-7.1395,15.875,-15.906,15.875
-    // This is actually an elliptical arc for the rounded bottom
     const bottomCenterX = ((28.443 + 0.344) / 59) * w;
     const bottomCenterY = ((38.5379 + 8.7667 / 2) / 62) * h;
     const radiusX = (15.906 / 59) * w;
+    graphic.arc(bottomCenterX, bottomCenterY, radiusX, 0, Math.PI, false);
 
-    // Arc from right to left (PI to 0)
-    // Note: Using circular arc as approximation (PixiJS arc doesn't support elliptical)
-    droplet.arc(bottomCenterX, bottomCenterY, radiusX, 0, Math.PI, false);
-
-    // Left side arc segment: c0,-3.5378,1.0945,-6.9015,3.125,-9.4844
     const x2 = 28.443 - 15.906;
     const y2 = 38.5379 + 8.7667;
-    droplet.bezierCurveTo(
+    graphic.bezierCurveTo(
       ((x2 + 0) / 59) * w,
       ((y2 - 3.5378) / 62) * h,
       ((x2 + 1.0945) / 59) * w,
@@ -320,10 +346,9 @@ export class PixiDropletRenderer {
       ((y2 - 9.4844) / 62) * h,
     );
 
-    // Left side curve back to start: c6.009,-7.645,10.407,-13.424,12.718,-25.36
     const x3 = x2 + 3.125;
     const y3 = y2 - 9.4844;
-    droplet.bezierCurveTo(
+    graphic.bezierCurveTo(
       ((x3 + 6.009) / 59) * w,
       ((y3 - 7.645) / 62) * h,
       ((x3 + 10.407) / 59) * w,
@@ -332,32 +357,13 @@ export class PixiDropletRenderer {
       ((y3 - 25.36) / 62) * h,
     );
 
-    droplet.fill({ color: 0xffffff }); // White - will be tinted to #880808 by filter
-
-    return droplet;
+    graphic.fill({ color: 0xffffff });
   }
 
-  private generateDropletConfigs(count: number): DropletConfig[] {
-    // Tighter spread to stay over "MURHA" only (38-58%)
-    const baseOffsets = [38, 42, 46, 50, 54, 58];
-    const configs: DropletConfig[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const baseIndex = i % baseOffsets.length;
-      const baseOffset = baseOffsets[baseIndex];
-      const jitter = (Math.random() * 2 - 1) * 3; // ±3% jitter
-      const x = Math.max(0.35, Math.min(0.6, (baseOffset + jitter) / 100)); // Clamp to 35-60%
-
-      configs.push({
-        x: x,
-        speed: 1 / 9, // 9 seconds per cycle to match CSS animation
-        scale: 0.5 + Math.random() * 1.0,
-        delay: i * 0.25,
-        phase: 0,
-      });
-    }
-
-    return configs;
+  private createDroplet(scale: number): Graphics {
+    const droplet = new this.PIXI.Graphics();
+    this.drawDroplet(droplet, scale);
+    return droplet;
   }
 
   private monitorFPS(ticker: Ticker) {
@@ -421,66 +427,71 @@ export class PixiDropletRenderer {
       this.monitorFPS(ticker);
     }
 
-    this.droplets.forEach((droplet, i) => {
-      const config = this.configs[i];
+    const speed = 1 / this.durationSeconds;
 
-      // Apply initial delay
-      if (this.elapsedTime < config.delay) {
+    this.dropletStates.forEach((state, index) => {
+      const droplet = state.graphic;
+      const elapsed = this.elapsedTime - state.delay;
+
+      if (elapsed < 0) {
         droplet.alpha = 0;
         return;
       }
 
-      droplet.alpha = 1;
+      const previousPhase = state.phase;
+      const rawPhase = elapsed * speed + state.phaseOffset;
+      const normalizedPhase = ((rawPhase % 1) + 1) % 1;
+      state.phase = normalizedPhase;
 
-      // Update phase (0 to 1 over 9 seconds)
-      const previousPhase = config.phase;
-      config.phase = ((this.elapsedTime - config.delay) * config.speed) % 1;
-
-      // Randomize x position when cycle completes (phase wraps from ~1 to ~0)
-      if (previousPhase > config.phase) {
-        // Regenerate random x offset within MURHA spread (38-58%)
-        // Tighter spread to stay over "MURHA" and not overlap the hyphen
-        const baseOffsets = [38, 42, 46, 50, 54, 58];
-        const baseIndex = i % baseOffsets.length;
-        const baseOffset = baseOffsets[baseIndex];
-        const jitter = (Math.random() * 2 - 1) * 3; // ±3% jitter (reduced from 5%)
-        config.x = Math.max(0.35, Math.min(0.6, (baseOffset + jitter) / 100)); // Clamp to 35-60%
-
-        // Also randomize scale slightly
-        config.scale = 0.5 + Math.random() * 1.0;
+      if (index === 0 && previousPhase > normalizedPhase) {
+        this.loopCallback?.();
       }
 
-      // Calculate Y position based on phase
+      droplet.alpha = 1;
+
       const screenHeight = this.app.screen.height;
       let y: number;
 
-      if (config.phase < 0.1) {
-        // Scale in at top
-        const t = config.phase / 0.1;
+      if (state.phase < 0.1) {
+        const t = state.phase / 0.1;
         y = 31;
-        droplet.scale.set(t * config.scale);
-      } else if (config.phase < 0.2) {
-        // Fall quickly to 40% (just above text)
-        const t = (config.phase - 0.1) / 0.1;
+        droplet.scale.set(t * state.scale);
+      } else if (state.phase < 0.2) {
+        const t = (state.phase - 0.1) / 0.1;
         y = 31 + t * (screenHeight * 0.4 - 31);
-        droplet.scale.set(config.scale);
-      } else if (config.phase < 0.7) {
-        // Slow section (40% to 60%) - merging with text at center
-        const t = (config.phase - 0.2) / 0.5;
+        droplet.scale.set(state.scale);
+      } else if (state.phase < 0.7) {
+        const t = (state.phase - 0.2) / 0.5;
         y = screenHeight * 0.4 + t * (screenHeight * 0.6 - screenHeight * 0.4);
-      } else if (config.phase < 0.8) {
-        // Fall to 100%
-        const t = (config.phase - 0.7) / 0.1;
+      } else if (state.phase < 0.8) {
+        const t = (state.phase - 0.7) / 0.1;
         y = screenHeight * 0.6 + t * (screenHeight - screenHeight * 0.6);
       } else {
-        // Fade out
-        const t = (config.phase - 0.8) / 0.2;
+        const t = (state.phase - 0.8) / 0.2;
         y = screenHeight + t * 100;
       }
 
-      droplet.x = config.x * this.app.screen.width;
+      droplet.x = (state.offset / 100) * this.app.screen.width;
       droplet.y = y;
     });
+
+    if (this.titleIntroActive && this.titleText) {
+      this.titleIntroElapsed += delta;
+      const progress = Math.min(
+        this.titleIntroElapsed / this.titleIntroDuration,
+        1,
+      );
+      const eased = 1 - (1 - progress) ** 3; // easeOutCubic
+      const scale = 0.88 + eased * 0.12;
+      this.titleText.scale.set(scale);
+      this.titleText.alpha = eased;
+
+      if (progress >= 1) {
+        this.titleIntroActive = false;
+        this.titleText.scale.set(1);
+        this.titleText.alpha = 1;
+      }
+    }
   }
 
   updateTheme(_theme: "dark" | "light") {
@@ -498,17 +509,18 @@ export class PixiDropletRenderer {
     }
   }
 
-  updateDropletCount(count: number, scaleMultiplier: number) {
-    // Recreate droplets with new count
-    this.destroy();
-    this.init(count, scaleMultiplier);
+  updateDroplets(seeds: DropletSeed[]) {
+    this.applyDropletSeeds(seeds);
   }
 
   destroy() {
-    this.app.ticker.remove(this.animate.bind(this));
+    this.app.ticker.remove(this.animateFn);
 
     // Remove resize listener
-    this.app.renderer.off("resize");
+    if (this.resizeHandler) {
+      this.app.renderer.off("resize", this.resizeHandler);
+      this.resizeHandler = undefined;
+    }
 
     if (this.container) {
       this.app.stage.removeChild(this.container);
@@ -516,9 +528,62 @@ export class PixiDropletRenderer {
       this.container = null;
     }
 
-    this.droplets = [];
-    this.configs = [];
+    this.dropletStates = [];
     this.elapsedTime = 0;
     this.fpsHistory = [];
+    this.gooContainer = null;
+    this.topBar = null;
+    this.bottomBar = null;
+    this.titleText = null;
+    this.titleIntroActive = false;
+  }
+
+  private applyDropletSeeds(seeds: DropletSeed[]) {
+    const gooContainer = this.gooContainer;
+    if (!gooContainer) return;
+    const bottomBar = this.bottomBar;
+
+    const ensureCountMatches = () => {
+      if (this.dropletStates.length === seeds.length) return;
+
+      for (const state of this.dropletStates) {
+        gooContainer.removeChild(state.graphic);
+        state.graphic.destroy();
+      }
+      this.dropletStates = [];
+
+      seeds.forEach((seed) => {
+        const droplet = this.createDroplet(seed.scale);
+        droplet.alpha = 0;
+        const insertIndex =
+          bottomBar && gooContainer.children.includes(bottomBar)
+            ? gooContainer.getChildIndex(bottomBar)
+            : gooContainer.children.length;
+        gooContainer.addChildAt(droplet, insertIndex);
+        this.dropletStates.push({
+          graphic: droplet,
+          delay: seed.delay,
+          offset: seed.offset,
+          scale: seed.scale,
+          phase: seed.phase,
+          phaseOffset: seed.phase,
+        });
+      });
+    };
+
+    ensureCountMatches();
+
+    this.dropletStates.forEach((state, index) => {
+      const seed = seeds[index];
+      state.delay = seed.delay;
+      state.offset = seed.offset;
+      state.scale = seed.scale;
+      state.phase = seed.phase;
+      state.phaseOffset = seed.phase;
+      state.graphic.alpha = 0;
+      this.drawDroplet(state.graphic, seed.scale);
+    });
+
+    this.elapsedTime = 0;
   }
 }

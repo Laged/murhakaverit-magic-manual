@@ -32,6 +32,11 @@
     0 6px 2px var(--title-goo-shadow2, rgba(136, 8, 8, 0.8));
 }
 
+.titleGooIntro {
+  animation: crisp-intro var(--title-intro-duration, 1.2s)
+    cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
 /* Crisp white title (sharp overlay) */
 .titleCrisp {
   position: absolute;
@@ -55,4 +60,24 @@
   text-shadow:
     0 0 0.2rem var(--title-crisp-shadow1, rgba(255, 255, 255, 0.35)),
     0 0 0.65rem var(--title-crisp-shadow2, rgba(255, 255, 255, 0.15));
+}
+
+.titleCrispIntro {
+  animation: crisp-intro var(--title-intro-duration, 1.2s)
+    cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes crisp-intro {
+  0% {
+    transform: translate(-50%, -50%) scale(0.88);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
 }
