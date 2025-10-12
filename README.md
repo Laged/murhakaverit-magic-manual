@@ -1,23 +1,23 @@
 # Murhakaverit Magic Manual
 
-A high-performance Next.js website featuring WebGL-accelerated blood droplet animations using PixiJS.
+A high-performance Next.js website featuring WebGL-accelerated blood droplet animations with graceful fallbacks for devices that cannot run the canvas version.
 
 ## Features
 
-- 🎨 **WebGL Blood Droplet Animations** - Hardware-accelerated particle system
-- 📱 **Mobile-Optimized** - Adaptive quality and performance monitoring
-- ♿ **Accessible** - Progressive enhancement with graceful fallbacks
-- 🎭 **Dark/Light Themes** - Seamless theme switching
-- 🔧 **Developer Tools** - Built-in FPS monitoring in development mode
+- 🎨 **WebGL Blood Droplet Animations** – PixiJS renderer with gooey blending and dynamic quality downgrades
+- 📱 **Mobile-Optimized** – Responsive droplet counts, scale multipliers, and viewport-aware pausing
+- ♿ **Accessible** – Reduced-motion static render and Safari-safe goo filter fallbacks
+- 🎭 **Dark/Light Themes** – Scene-wide theme tokens for quick palette swaps
+- 🔧 **Developer Hooks** – Optional FPS overlay and programmatic renderer controls
 
 ## Tech Stack
 
-- **Next.js 15.5.4** - React framework with Turbopack
-- **PixiJS 8.7.2** - WebGL 2D rendering library
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Tailwind CSS 4** - Styling
-- **Biome** - Linting and formatting
+- **Next.js 15.5.4** – React framework with Turbopack
+- **PixiJS 8.7.2** – WebGL 2D rendering library
+- **React 19** – UI framework
+- **TypeScript** – Type safety
+- **Tailwind CSS 4** – Styling
+- **Biome** – Linting and formatting
 
 ## Getting Started
 
@@ -42,34 +42,23 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### Available Scripts
 
-- `bun run dev` - Start development server with Turbopack
-- `bun run build` - Build for production
-- `bun run start` - Start production server
-- `bun run lint` - Check code with Biome
-- `bun run lint:fix` - Auto-fix lint issues
-- `bun run format` - Format code with Biome
-- `bun run type-check` - Run TypeScript compiler check
-- `bun run analyze` - Analyze bundle size
-- `bun run perf` - Build and start for performance testing
+- `bun run dev` – Start development server with Turbopack
+- `bun run build` – Build for production
+- `bun run start` – Start production server
+- `bun run lint` – Check code with Biome
+- `bun run lint:fix` – Auto-fix lint issues
+- `bun run format` – Format code with Biome
+- `bun run type-check` – Run TypeScript compiler check
+- `bun run analyze` – Analyze bundle size
+- `bun run perf` – Build and start for performance testing
 
-## Performance
+## Performance & Rendering
 
-This project uses WebGL rendering via PixiJS to achieve 60fps animations even on mobile devices. See [PIXI_IMPLEMENTATION.md](./PIXI_IMPLEMENTATION.md) for detailed performance documentation.
-
-### Progressive Enhancement
-
-The application automatically selects the best rendering method based on device capabilities:
-
-1. **WebGL (PixiJS)** - For devices with WebGL support (preferred)
-2. **CSS Animations** - Fallback for devices without WebGL
-3. **Static Title** - For users with reduced motion preference
+The hero relies on progressive enhancement: PixiJS drives the primary effect, CSS animations handle no-WebGL devices, and a static render covers reduced-motion users. See `docs/hero-scene.md` for a full breakdown of the filters, randomisation logic, and rendering order.
 
 ### Debug Mode
 
-In development mode, a real-time FPS overlay appears in the top-right corner showing:
-- Current FPS
-- Average FPS
-- Performance status (Good/Fair/Poor)
+`src/components/BloodDroplet/DebugOverlay.tsx` can be mounted during development to display live and average FPS readings.
 
 ## Browser Support
 
@@ -91,8 +80,9 @@ src/
 │   ├── BloodDroplet/
 │   │   ├── PixiDropletCanvas.tsx       # WebGL renderer wrapper
 │   │   ├── PixiDropletRenderer.ts      # Core rendering logic
-│   │   ├── DebugOverlay.tsx           # FPS monitor
-│   │   └── DropletShape.tsx           # CSS fallback
+│   │   ├── DebugOverlay.tsx            # Optional FPS monitor
+│   │   ├── CrispBloodDroplet.tsx       # Goo filter wrapper + theme tokens
+│   │   └── DropletShape.tsx            # CSS fallback droplet
 │   └── GraniittiSauna/
 │       └── index.tsx         # Sauna card component
 └── hooks/
@@ -101,8 +91,8 @@ src/
 
 ## Documentation
 
-- [PIXI_IMPLEMENTATION.md](./PIXI_IMPLEMENTATION.md) - PixiJS implementation details and performance metrics
-- [PerformanceOptimizations.md](./PerformanceOptimizations.md) - Original optimization plan
+- `docs/hero-scene.md` – Architecture, rendering modes, and Pixi/CSS alignment
+- `docs/mobile-responsiveness.md` – Breakpoints, droplet distribution, and fallback behaviour on mobile
 
 ## License
 
