@@ -8,8 +8,36 @@ interface DropletConfig {
   phase: number; // Animation phase (0-1)
 }
 
+type QualityTier = "low" | "medium" | "high";
+
+interface QualitySettings {
+  blurStrength: number;
+  blurQuality: number;
+  dropletDetail: number; // Multiplier for bezier curve precision
+}
+
+const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
+  low: {
+    blurStrength: 6,
+    blurQuality: 2,
+    dropletDetail: 0.8,
+  },
+  medium: {
+    blurStrength: 8,
+    blurQuality: 3,
+    dropletDetail: 1.0,
+  },
+  high: {
+    blurStrength: 10,
+    blurQuality: 4,
+    dropletDetail: 1.0,
+  },
+};
+
 // biome-ignore lint/suspicious/noExplicitAny: PixiJS module type is complex and dynamically imported
 type PixiModule = any;
+
+export type { QualityTier };
 
 export class PixiDropletRenderer {
   private app: Application;
@@ -19,10 +47,26 @@ export class PixiDropletRenderer {
   private droplets: Graphics[] = [];
   private configs: DropletConfig[] = [];
   private elapsedTime = 0;
+  private quality: QualitySettings;
+  private blurFilter: any = null;
 
-  constructor(app: Application, PIXI: PixiModule) {
+  constructor(app: Application, PIXI: PixiModule, qualityTier?: QualityTier) {
     this.app = app;
     this.PIXI = PIXI;
+    this.quality = QUALITY_PRESETS[qualityTier ?? this.detectQualityTier()];
+  }
+
+  private detectQualityTier(): QualityTier {
+    // Detect device capabilities
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isLowEnd =
+      isMobile &&
+      (navigator.hardwareConcurrency ?? 4) <= 4 &&
+      window.devicePixelRatio <= 2;
+
+    if (isLowEnd) return "low";
+    if (isMobile) return "medium";
+    return "high";
   }
 
   async init(dropletCount: number, scaleMultiplier: number) {
@@ -34,12 +78,12 @@ export class PixiDropletRenderer {
     this.gooContainer = new this.PIXI.Container();
     this.container.addChild(this.gooContainer);
 
-    // Apply blur filter for goo effect
-    const blurFilter = new this.PIXI.BlurFilter({
-      strength: 8,
-      quality: 4,
+    // Apply adaptive blur filter for goo effect
+    this.blurFilter = new this.PIXI.BlurFilter({
+      strength: this.quality.blurStrength,
+      quality: this.quality.blurQuality,
     });
-    this.gooContainer.filters = [blurFilter];
+    this.gooContainer.filters = [this.blurFilter];
 
     // Add top bar
     const topBar = this.createBar(0);
@@ -214,6 +258,16 @@ export class PixiDropletRenderer {
   updateTheme(_theme: "dark" | "light") {
     // Update colors if needed
     // For now, blood red stays the same in both themes
+  }
+
+  updateQuality(qualityTier: QualityTier) {
+    this.quality = QUALITY_PRESETS[qualityTier];
+
+    // Update blur filter
+    if (this.blurFilter) {
+      this.blurFilter.strength = this.quality.blurStrength;
+      this.blurFilter.quality = this.quality.blurQuality;
+    }
   }
 
   updateDropletCount(count: number, scaleMultiplier: number) {
