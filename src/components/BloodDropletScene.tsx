@@ -2,8 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import BloodDroplet, { DropletShape } from "@/components/BloodDroplet";
+import { DropletShape } from "@/components/BloodDroplet";
 import styles from "@/components/BloodDroplet/BloodDroplet.module.css";
+import CrispBloodDroplet from "@/components/BloodDroplet/CrispBloodDroplet";
 import { useWebGLSupport } from "@/hooks/useWebGLSupport";
 
 const PixiDropletCanvas = dynamic(
@@ -197,7 +198,7 @@ export default function BloodDropletScene({
         className={`w-screen ${containerBgClass}`}
         style={{ height: "95vh" }}
       >
-        <BloodDroplet
+        <CrispBloodDroplet
           theme={theme}
           gooChildren={
             <div className={styles.titleGoo} style={{ opacity: 0.5 }}>
@@ -259,7 +260,7 @@ export default function BloodDropletScene({
         </>
       ) : (
         // CSS-based fallback rendering
-        <BloodDroplet
+        <CrispBloodDroplet
           theme={theme}
           gooChildren={
             <>
