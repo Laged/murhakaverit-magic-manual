@@ -84,36 +84,38 @@ export class PixiDropletRenderer {
     this.gooContainer = new this.PIXI.Container();
     this.container.addChild(this.gooContainer);
 
-    // Apply blur + color matrix for goo effect (matches SVG filter)
+    // Apply blur filter for goo effect
     this.blurFilter = new this.PIXI.BlurFilter({
       strength: this.quality.blurStrength,
       quality: this.quality.blurQuality,
     });
 
     // Color matrix filter for contrast (alpha * 20 - 8)
-    // Matches feColorMatrix: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+    // SVG: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+    // PixiJS ColorMatrixFilter uses column-major 5x4 matrix
     const colorMatrix = new this.PIXI.ColorMatrixFilter();
+    // Keep RGB, boost and threshold alpha for sharp goo edges
     colorMatrix.matrix = [
       1,
       0,
       0,
-      0,
-      0, // Red channel
-      0,
-      1,
-      0,
-      0,
-      0, // Green channel
-      0,
+      0, // Red (keep)
       0,
       1,
       0,
-      0, // Blue channel
+      0, // Green (keep)
+      0,
+      0,
+      1,
+      0, // Blue (keep)
       0,
       0,
       0,
-      20,
-      -8, // Alpha channel: multiply by 20, subtract 8
+      20, // Alpha (multiply by 20)
+      0,
+      0,
+      0,
+      -8, // Offset (subtract 8 from alpha)
     ];
 
     this.gooContainer.filters = [this.blurFilter, colorMatrix];
@@ -137,7 +139,10 @@ export class PixiDropletRenderer {
     this.gooContainer.addChild(bottomBar);
 
     // Add red title text (inside goo container so it gets blurred)
-    await this.createTitleText();
+    await this.createTitleText("goo");
+
+    // Add white crisp title (outside goo container, no blur)
+    await this.createTitleText("crisp");
 
     // Start animation loop
     this.app.ticker.add(this.animate.bind(this));
@@ -146,23 +151,29 @@ export class PixiDropletRenderer {
     this.setupResizeHandler();
   }
 
-  private async createTitleText() {
+  private async createTitleText(layer: "goo" | "crisp") {
     // Load Creepster font dynamically
     const fontUrl =
       "https://fonts.googleapis.com/css2?family=Creepster&display=swap";
     await this.loadWebFont(fontUrl);
 
+    const fontSize = this.calculateTitleFontSize();
+    const isGoo = layer === "goo";
+
     const titleText = new this.PIXI.Text({
       text: "murha-\nkaverit",
       style: {
         fontFamily: "Creepster, cursive",
-        fontSize: this.calculateTitleFontSize(),
-        fill: 0x880808,
+        fontSize,
+        fill: isGoo ? 0x880808 : 0xffffff, // Red for goo, white for crisp
         align: "center",
-        lineHeight: 0.8 * this.calculateTitleFontSize(),
+        lineHeight: 0.8 * fontSize,
         fontWeight: "900",
         letterSpacing: 0,
-        stroke: { color: 0x880808, width: 1 },
+        stroke: {
+          color: isGoo ? 0x880808 : 0xffffff,
+          width: 1,
+        },
       },
     });
 
@@ -170,7 +181,13 @@ export class PixiDropletRenderer {
     titleText.x = this.app.screen.width / 2;
     titleText.y = this.app.screen.height / 2;
 
-    this.gooContainer.addChild(titleText);
+    // Add to appropriate container
+    if (isGoo) {
+      this.gooContainer.addChild(titleText);
+    } else {
+      // Crisp title goes in main container (outside blur filter)
+      this.container.addChild(titleText);
+    }
   }
 
   private calculateTitleFontSize(): number {
