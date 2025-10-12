@@ -77,12 +77,14 @@ export class PixiDropletRenderer {
 
   async init(dropletCount: number, scaleMultiplier: number) {
     // Create main container
-    this.container = new this.PIXI.Container();
-    this.app.stage.addChild(this.container);
+    const container = new this.PIXI.Container();
+    this.container = container;
+    this.app.stage.addChild(container);
 
     // Create goo container with blur filter restored
-    this.gooContainer = new this.PIXI.Container();
-    this.container.addChild(this.gooContainer);
+    const gooContainer = new this.PIXI.Container();
+    this.gooContainer = gooContainer;
+    container.addChild(gooContainer);
 
     // Apply blur + color matrix for goo effect (matches SVG filter)
     this.blurFilter = new this.PIXI.BlurFilter({
@@ -143,11 +145,11 @@ export class PixiDropletRenderer {
     ];
 
     // Apply filters: blur → alpha blending → color tint
-    this.gooContainer.filters = [this.blurFilter, alphaMatrix, colorTint];
+    gooContainer.filters = [this.blurFilter, alphaMatrix, colorTint];
 
     // Add top bar
     const topBar = this.createBar(0);
-    this.gooContainer.addChild(topBar);
+    gooContainer.addChild(topBar);
 
     // Generate droplet configurations
     this.configs = this.generateDropletConfigs(dropletCount);
@@ -155,13 +157,13 @@ export class PixiDropletRenderer {
     // Create droplet graphics
     for (const config of this.configs) {
       const droplet = this.createDroplet(config.scale * scaleMultiplier);
-      this.gooContainer.addChild(droplet);
+      gooContainer.addChild(droplet);
       this.droplets.push(droplet);
     }
 
     // Add bottom bar
     const bottomBar = this.createBar(this.app.screen.height - 62);
-    this.gooContainer.addChild(bottomBar);
+    gooContainer.addChild(bottomBar);
 
     // Add red title text (inside goo container so it gets blurred)
     await this.createTitleText();
@@ -196,6 +198,10 @@ export class PixiDropletRenderer {
     titleText.anchor.set(0.5);
     titleText.x = this.app.screen.width / 2;
     titleText.y = this.app.screen.height / 2;
+
+    if (!this.gooContainer) {
+      throw new Error("PixiDropletRenderer.gooContainer not initialized");
+    }
 
     this.gooContainer.addChild(titleText);
   }

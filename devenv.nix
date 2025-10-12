@@ -3,6 +3,7 @@
 {
   # https://devenv.sh/basics/
   env.GREET = "devenv";
+  env.PRE_COMMIT_HOME = ".git/pre-commit-cache";
 
   # https://devenv.sh/packages/
   packages = [ pkgs.git pkgs.biome pkgs.nil ];
@@ -27,6 +28,7 @@
 
   scripts.fix.exec = ''
     biome check src --write
+    bun run type-check
   '';
 
   scripts.dev.exec = ''
