@@ -84,12 +84,39 @@ export class PixiDropletRenderer {
     this.gooContainer = new this.PIXI.Container();
     this.container.addChild(this.gooContainer);
 
-    // Apply blur filter for goo effect (restored)
+    // Apply blur + color matrix for goo effect (matches SVG filter)
     this.blurFilter = new this.PIXI.BlurFilter({
       strength: this.quality.blurStrength,
       quality: this.quality.blurQuality,
     });
-    this.gooContainer.filters = [this.blurFilter];
+
+    // Color matrix filter for contrast (alpha * 20 - 8)
+    // Matches feColorMatrix: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+    const colorMatrix = new this.PIXI.ColorMatrixFilter();
+    colorMatrix.matrix = [
+      1,
+      0,
+      0,
+      0,
+      0, // Red channel
+      0,
+      1,
+      0,
+      0,
+      0, // Green channel
+      0,
+      0,
+      1,
+      0,
+      0, // Blue channel
+      0,
+      0,
+      0,
+      20,
+      -8, // Alpha channel: multiply by 20, subtract 8
+    ];
+
+    this.gooContainer.filters = [this.blurFilter, colorMatrix];
 
     // Add top bar
     const topBar = this.createBar(0);
@@ -284,7 +311,7 @@ export class PixiDropletRenderer {
     for (let i = 0; i < count; i++) {
       configs.push({
         x: (baseOffsets[i] + (Math.random() * 2 - 1) * 5) / 100,
-        speed: 0.3 + Math.random() * 0.2,
+        speed: 1 / 9, // 9 seconds per cycle to match CSS animation
         scale: 0.5 + Math.random() * 1.0,
         delay: i * 0.25,
         phase: 0,
