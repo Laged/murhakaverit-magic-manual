@@ -33,8 +33,8 @@ const DROPLET_BASE_SIZE = 1.0; // Scale multiplier for all droplets
 const DROPLET_MIN_SCALE = 0.5;
 const DROPLET_MAX_SCALE = 1.0;
 const DROPLET_MAX_DELAY = 1.25; // seconds
-const DROPLET_MIN_OFFSET = 15; // percentage
-const DROPLET_MAX_OFFSET = 75; // percentage
+const _DROPLET_MIN_OFFSET = 15; // percentage (unused, legacy)
+const _DROPLET_MAX_OFFSET = 75; // percentage (unused, legacy)
 
 // === TEXT STYLING ===
 const RED_LAYER_STROKE_WIDTH_MULTIPLIER = 0.03; // Larger stroke for red layer
@@ -43,9 +43,20 @@ const TIP_OFFSET_VARIATION = 10; // pixels (how much droplet shapes vary)
 // === PHYSICS CONSTANTS (TUNE THESE!) ===
 const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
 const MAX_VELOCITY = 12; // Terminal velocity (max fall speed)
-const TEXT_FRICTION = 0.88; // Friction inside text (0.88 = 12% loss per frame, higher = slower)
-const MIN_VELOCITY = 1.5; // Minimum velocity - ensures droplets always fall
+const MIN_VELOCITY = 3; // Minimum velocity - ensures droplets always fall
 const DEBUG_SHOW_BOUNDING_BOXES = true; // Show droplet bounding boxes for debugging
+
+// === FLUID PHYSICS - FRICTION CURVES (TUNE THESE!) ===
+// Entry zone (0.0 - 0.2): High impact friction when entering fluid
+const ENTRY_FRICTION = 0.5; // Strong impact deceleration (50% velocity retained)
+const ENTRY_ZONE_END = 0.2; // First 20% of fluid
+
+// Middle zone (0.2 - 0.7): Linear steady movement through fluid
+const MIDDLE_FRICTION = 0.88; // Moderate friction (88% velocity retained)
+
+// Exit zone (0.7 - 1.0): Hanging/dripping effect when leaving fluid
+const EXIT_FRICTION = 0.6; // Strong hanging friction (60% velocity retained)
+const EXIT_ZONE_START = 0.7; // Last 30% of fluid
 
 interface DropletState {
   graphic: Graphics;
@@ -57,7 +68,7 @@ interface DropletState {
   // Physics state
   y: number; // Current Y position
   velocity: number; // Current velocity (pixels per frame)
-  phase: "spawn" | "freefall" | "inText" | "merge";
+  phase: "spawn" | "freefall" | "inTopBar" | "inText" | "inBottomBar" | "merge";
 }
 
 export default function PixiDropletIndividual() {
@@ -425,7 +436,7 @@ export default function PixiDropletIndividual() {
 
       const tick = (ticker: Ticker) => {
         const dt = ticker.deltaTime / 60;
-        const { width, height } = app.screen;
+        const { height } = app.screen;
 
         // Animate title intro (both red and white text)
         if (titleIntroActive) {
@@ -478,7 +489,7 @@ export default function PixiDropletIndividual() {
           // === VELOCITY-BASED PHYSICS WITH COLLISION DETECTION ===
           // (Physics constants are at top of file for easy tuning)
 
-          const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
+          // Phase tracking removed - now using state-based physics
 
           // Reset on new cycle - check if we've completed and faded out
           if (state.phase === "merge" && state.graphic.alpha <= 0.05) {
@@ -499,25 +510,40 @@ export default function PixiDropletIndividual() {
             }
           }
 
-          // SIMPLIFIED COLLISION DETECTION - just check where droplet is
+          // COLLISION DETECTION - check which fluid zone droplet is in
+          const dropletInsideTopBar =
+            dropletBottom >= 0 && dropletTop <= topBarBottom;
           const dropletInsideText =
             dropletBottom >= textTop && dropletTop <= textBottom;
-          const dropletAtBottomPuddle = dropletBottom >= bottomPuddleSurface;
+          const dropletInsideBottomBar =
+            dropletBottom >= bottomPuddleSurface && dropletTop <= height;
 
-          // STATE TRANSITIONS - much simpler!
+          // STATE TRANSITIONS based on fluid zones
           if (state.phase === "spawn") {
             // Handled in spawn section above
           } else if (state.phase === "freefall") {
-            // Check what we're about to hit
-            if (dropletAtBottomPuddle) {
-              state.phase = "merge";
+            // Check what fluid zone we're entering
+            if (dropletInsideBottomBar) {
+              state.phase = "inBottomBar";
             } else if (dropletInsideText) {
-              state.phase = "inText"; // Directly to inText, skip impact micro-phase
+              state.phase = "inText";
+            } else if (dropletInsideTopBar) {
+              state.phase = "inTopBar";
+            }
+          } else if (state.phase === "inTopBar") {
+            // Check if we've exited the top bar
+            if (!dropletInsideTopBar && dropletTop > topBarBottom) {
+              state.phase = "freefall";
             }
           } else if (state.phase === "inText") {
             // Check if we've exited the text
             if (!dropletInsideText && dropletTop > textBottom) {
               state.phase = "freefall";
+            }
+          } else if (state.phase === "inBottomBar") {
+            // Transition to merge when deep enough
+            if (dropletBottom > bottomPuddleSurface + 40) {
+              state.phase = "merge";
             }
           } else if (state.phase === "merge") {
             // Stay in merge until reset
@@ -529,21 +555,64 @@ export default function PixiDropletIndividual() {
             state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
-          } else if (state.phase === "inText") {
-            // Strong friction in text - slows down dramatically
-            state.velocity *= TEXT_FRICTION;
-            // Ensure minimum velocity to keep moving through text
+          } else if (
+            state.phase === "inTopBar" ||
+            state.phase === "inText" ||
+            state.phase === "inBottomBar"
+          ) {
+            // FLUID PHYSICS - Dynamic friction based on position in fluid
+
+            // Calculate progress through fluid (0.0 = entry, 1.0 = exit)
+            let fluidTop: number, fluidBottom: number, fluidProgress: number;
+            if (state.phase === "inTopBar") {
+              fluidTop = 0;
+              fluidBottom = topBarBottom;
+            } else if (state.phase === "inText") {
+              fluidTop = textTop;
+              fluidBottom = textBottom;
+            } else {
+              // inBottomBar
+              fluidTop = bottomPuddleSurface;
+              fluidBottom = height;
+            }
+            fluidProgress =
+              (dropletBottom - fluidTop) / (fluidBottom - fluidTop);
+            fluidProgress = Math.max(0, Math.min(1, fluidProgress)); // Clamp 0-1
+
+            // Apply friction curve based on zone
+            let frictionFactor: number;
+            if (fluidProgress < ENTRY_ZONE_END) {
+              // Entry zone: High impact friction (0.0 - 0.2)
+              frictionFactor = ENTRY_FRICTION;
+            } else if (fluidProgress < EXIT_ZONE_START) {
+              // Middle zone: Linear steady movement (0.2 - 0.7)
+              frictionFactor = MIDDLE_FRICTION;
+            } else {
+              // Exit zone: Hanging/dripping effect (0.7 - 1.0)
+              // Gradually increase friction as we approach exit
+              const exitProgress =
+                (fluidProgress - EXIT_ZONE_START) / (1.0 - EXIT_ZONE_START);
+              frictionFactor =
+                MIDDLE_FRICTION +
+                (EXIT_FRICTION - MIDDLE_FRICTION) * exitProgress;
+            }
+
+            state.velocity *= frictionFactor;
             state.velocity = Math.max(state.velocity, MIN_VELOCITY);
-            // Gentle scale variation
-            const textProgress =
-              (dropletBottom - textTop) / (textBottom - textTop);
-            const scaleVariation = 1 + Math.sin(textProgress * Math.PI) * 0.1;
-            state.graphic.scale.set(state.scale * scaleVariation);
+
+            // Visual effects for text only
+            if (state.phase === "inText") {
+              const scaleVariation =
+                1 + Math.sin(fluidProgress * Math.PI) * 0.1;
+              state.graphic.scale.set(state.scale * scaleVariation);
+            } else {
+              state.graphic.scale.set(state.scale);
+            }
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
             // Merge into puddle - slow down but keep minimum velocity
-            state.velocity *= 0.7; // Decelerate
-            state.velocity = Math.max(state.velocity, MIN_VELOCITY); // But always keep moving
+            state.velocity *= 0.7;
+            state.velocity = Math.max(state.velocity, MIN_VELOCITY);
             const mergeProgress = (dropletBottom - bottomPuddleSurface) / 40;
             const mergeFade = Math.max(0, 1 - mergeProgress);
             state.graphic.alpha = mergeFade;
