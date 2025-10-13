@@ -43,20 +43,20 @@ const TIP_OFFSET_VARIATION = 10; // pixels (how much droplet shapes vary)
 // === PHYSICS CONSTANTS (TUNE THESE!) ===
 const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
 const MAX_VELOCITY = 12; // Terminal velocity (max fall speed)
-const MIN_VELOCITY = 3; // Minimum velocity - ensures droplets always fall
+const MIN_VELOCITY = 1; // Minimum velocity - ensures droplets always fall
 const DEBUG_SHOW_BOUNDING_BOXES = true; // Show droplet bounding boxes for debugging
 
 // === FLUID PHYSICS - FRICTION CURVES (TUNE THESE!) ===
 // Entry zone (0.0 - 0.2): High impact friction when entering fluid
-const ENTRY_FRICTION = 0.5; // Strong impact deceleration (50% velocity retained)
-const ENTRY_ZONE_END = 0.2; // First 20% of fluid
+const ENTRY_FRICTION = 0.8; // Strong impact deceleration (50% velocity retained)
+const ENTRY_ZONE_END = 0.1; // First 20% of fluid
 
 // Middle zone (0.2 - 0.7): Linear steady movement through fluid
-const MIDDLE_FRICTION = 0.88; // Moderate friction (88% velocity retained)
+const MIDDLE_FRICTION = 1.02; // Moderate friction (88% velocity retained)
 
 // Exit zone (0.7 - 1.0): Hanging/dripping effect when leaving fluid
-const EXIT_FRICTION = 0.6; // Strong hanging friction (60% velocity retained)
-const EXIT_ZONE_START = 0.7; // Last 30% of fluid
+const EXIT_FRICTION = 0.9; // Strong hanging friction (60% velocity retained)
+const EXIT_ZONE_START = 0.9; // Last 30% of fluid
 
 interface DropletState {
   graphic: Graphics;
@@ -479,7 +479,7 @@ export default function PixiDropletIndividual() {
           const topBarBottom = BAR_HEIGHT;
           const textBounds = titleText.getBounds();
           const textTop = textBounds.y;
-          const textBottom = textBounds.y + textBounds.height;
+          const textBottom = textBounds.y + textBounds.height - dropletHeight;
           const bottomPuddleSurface = height - BAR_HEIGHT;
 
           // Calculate droplet edges (collision points)
@@ -499,13 +499,15 @@ export default function PixiDropletIndividual() {
 
           // SPAWN PHASE: Emerge from top bar
           if (state.phase === "spawn") {
-            const spawnProgress = Math.min(elapsed / 0.5, 1);
+            const spawnProgress = Math.min(elapsed / 0.5, 1.0);
+            const spawnThreshold = 0.9;
+            const spawnGrowth = 0.5;
             state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
             state.velocity = spawnProgress * 2; // Gentle initial velocity
-            state.graphic.scale.set(Math.max(0.3, spawnProgress) * state.scale);
+            state.graphic.scale.set(Math.max(0.5, spawnProgress) * state.scale);
             state.graphic.alpha = 1;
 
-            if (spawnProgress >= 1) {
+            if (spawnProgress >= spawnThreshold) {
               state.phase = "freefall";
             }
           }
