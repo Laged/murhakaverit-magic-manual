@@ -7,12 +7,15 @@
 - [x] **Issue #1: Droplets falling outside text bounds**
   - Problem: Droplets spawn and fall outside text area (yolo offsets)
   - Solution: Calculate droplet spawn X based on actual text top-left/top-right corners
-  - Status: ✅ Complete
+  - Status: ✅ Complete & Refined
   - Changes: 
     - Use `titleText.getBounds()` to get actual text dimensions
-    - Calculate minX/maxX based on text bounds with 5% margin
+    - Left margin: 5% of text width to avoid leftmost chars
+    - Right margin: subtract charWidth (fontSize * 0.6) to avoid rightmost chars (-, T)
     - Changed from percentage-based to absolute pixel positioning
-  - Commit: `fix: constrain droplets to text bounds`
+  - Commits: 
+    - `fix: constrain droplets to text bounds`
+    - `refine: avoid droplets on rightmost characters`
   - Ready for review
 
 - [ ] **Issue #2: Droplet physics not responsive to text position**

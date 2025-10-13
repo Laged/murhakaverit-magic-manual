@@ -341,10 +341,16 @@ export default function PixiDropletIndividual() {
         const textRight = textBounds.x + textBounds.width;
         const textWidth = textBounds.width;
 
-        // Random position within text bounds (with small margin)
-        const margin = textWidth * 0.05; // 5% margin on each side
-        const minX = textLeft + margin;
-        const maxX = textRight - margin;
+        // Estimate character width to avoid rightmost chars
+        // Creepster font is roughly 0.6x fontSize wide per character
+        const charWidth = fontSize * 0.6;
+
+        // Random position within text bounds
+        // Left: 5% margin to avoid leftmost chars
+        // Right: subtract charWidth to avoid rightmost chars (-, T)
+        const leftMargin = textWidth * 0.05;
+        const minX = textLeft + leftMargin;
+        const maxX = textRight - charWidth;
         state.offset = minX + Math.random() * (maxX - minX);
 
         // KEY: clear() + redraw
