@@ -258,18 +258,14 @@ export default function PixiDropletIndividual() {
       // Detect mobile and adjust settings
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      // Mobile: larger droplets (don't scale down), less blur, tighter horizontal spacing
-      const mobileMinScale = isMobile ? DROPLET_MIN_SCALE : DROPLET_MIN_SCALE;
-      const mobileMaxScale = isMobile ? DROPLET_MAX_SCALE : DROPLET_MAX_SCALE;
-      const mobileMinOffset = isMobile ? 5 : DROPLET_MIN_OFFSET;
-      const mobileMaxOffset = isMobile ? 65 : DROPLET_MAX_OFFSET;
+      // Mobile: fewer droplets and adjusted blur for performance
       const mobileDropletCount = isMobile ? 4 : NUM_DROPLETS;
 
       // Adjust blur and alpha for mobile - less blur so droplets are visible
       if (isMobile) {
-        blurFilter.strength = 15; // Reduce from 25 to 10
-        alphaMatrix.matrix[14] = 10; // Reduce alpha multiply from 15 to 10
-        alphaMatrix.matrix[19] = -3; // Reduce alpha offset from -5 to -3
+        blurFilter.strength = 15;
+        alphaMatrix.matrix[14] = 10; // Reduce alpha multiply
+        alphaMatrix.matrix[19] = -3; // Reduce alpha offset
       }
 
       // Create multiple droplets
@@ -277,14 +273,13 @@ export default function PixiDropletIndividual() {
       for (let i = 0; i < mobileDropletCount; i++) {
         const graphic = new Graphics();
         root.addChild(graphic);
-        const scaleRange = mobileMaxScale - mobileMinScale;
-        const offsetRange = mobileMaxOffset - mobileMinOffset;
+        const scaleRange = DROPLET_MAX_SCALE - DROPLET_MIN_SCALE;
         droplets.push({
           graphic,
-          scale: mobileMinScale + Math.random() * scaleRange,
+          scale: DROPLET_MIN_SCALE + Math.random() * scaleRange,
           elapsedTime: 0,
           delay: Math.random() * DROPLET_MAX_DELAY,
-          offset: mobileMinOffset + Math.random() * offsetRange,
+          offset: 0, // Will be set by resetDroplet based on text bounds
         });
       }
 
@@ -334,8 +329,8 @@ export default function PixiDropletIndividual() {
 
       // Reset individual droplet
       const resetDroplet = (state: DropletState, _dropletIndex: number) => {
-        const scaleRange = mobileMaxScale - mobileMinScale;
-        state.scale = mobileMinScale + Math.random() * scaleRange;
+        const scaleRange = DROPLET_MAX_SCALE - DROPLET_MIN_SCALE;
+        state.scale = DROPLET_MIN_SCALE + Math.random() * scaleRange;
         state.elapsedTime = 0;
         state.delay = Math.random() * DROPLET_MAX_DELAY;
 
