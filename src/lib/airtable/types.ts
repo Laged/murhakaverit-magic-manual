@@ -7,15 +7,16 @@ export const SignUpFormSchema = z.object({
   Puhnro: z.string().min(1, "Puhelinnumero vaaditaan"),
   Ruokavalio: z.array(z.string()).min(1, "Valitse vähintään yksi vaihtoehto"),
   Kuljetus: z.string().min(1, "Kuljetus vaaditaan"),
+  Roolipelikiinnostus: z.boolean().optional(),
   Pelikiinnostus: z
     .array(z.string())
     .min(1, "Valitse vähintään yksi vaihtoehto"),
   "Tulen paikalle": z.string().min(1, "Valinta vaaditaan"),
   Allergiat: z.string().optional(),
-  "Terveydellisiä huomioita järjestäjälle": z.string().optional(),
-  Majoitukset: z.string().optional(), // Single line text field
+  Terveyshuomioita: z.string().optional(),
+  Majoitushuomioita: z.string().optional(), // Single line text field
   Majoitus: z.array(z.string()).min(1, "Majoitus vaaditaan"), // Linked record IDs
-  "Osoitetiedot laskusta varten": z.string().optional(),
+  Laskutustiedot: z.string().optional(),
 });
 
 export type SignUpFormData = z.infer<typeof SignUpFormSchema>;
