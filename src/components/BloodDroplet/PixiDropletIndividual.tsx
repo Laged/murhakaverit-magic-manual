@@ -46,6 +46,10 @@ interface DropletState {
   elapsedTime: number;
   delay: number;
   offset: number;
+  // Physics state
+  y: number; // Current Y position
+  velocity: number; // Current velocity (pixels per frame)
+  phase: "spawn" | "freefall" | "impact" | "inText" | "exit" | "merge";
 }
 
 export default function PixiDropletIndividual() {
@@ -280,6 +284,9 @@ export default function PixiDropletIndividual() {
           elapsedTime: 0,
           delay: Math.random() * DROPLET_MAX_DELAY,
           offset: 0, // Will be set by resetDroplet based on text bounds
+          y: 0,
+          velocity: 0,
+          phase: "spawn",
         });
       }
 
@@ -426,101 +433,122 @@ export default function PixiDropletIndividual() {
             return;
           }
 
-          const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
-
+          // Calculate droplet dimensions (per-droplet size!)
           const baseSize = 1.5;
           const dropletHeight = DROPLET_BASE_HEIGHT * state.scale * baseSize;
           const halfHeight = dropletHeight / 2;
-          const topBarBottom = BAR_HEIGHT;
 
-          // Get actual text Y coordinates from PixiJS
+          // Get collision surfaces
+          const topBarBottom = BAR_HEIGHT;
           const textBounds = titleText.getBounds();
           const textTop = textBounds.y;
           const textBottom = textBounds.y + textBounds.height;
+          const bottomPuddleSurface = height - BAR_HEIGHT;
 
-          const bottomPuddleSurface = height - BAR_HEIGHT - halfHeight / 8;
+          // Calculate droplet edges (collision points)
+          const dropletBottom = state.y + halfHeight;
+          const dropletTop = state.y - halfHeight;
 
-          let y: number;
+          // === VELOCITY-BASED PHYSICS WITH COLLISION DETECTION ===
 
-          const easeOutQuad = (t: number) => 1 - (1 - t) ** 2;
-          const easeInCubic = (t: number) => t ** 3;
-          const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
-          const easeInQuart = (t: number) => t ** 4;
-          const easeInOutCubic = (t: number) =>
-            t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+          // Physics constants
+          const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
+          const MAX_VELOCITY = 12; // Terminal velocity
+          const IMPACT_DECEL = 0.85; // Deceleration factor when hitting surface (85% dampening)
+          const TEXT_FRICTION = 0.92; // Friction inside text (92% of velocity retained)
+          const EXIT_ACCEL = 0.15; // Acceleration when exiting (gaining speed)
 
-          if (phase < 0.1) {
-            // Spawn phase: droplet emerges from top bar
-            const t = phase / 0.1;
-            const easedT = easeInOutCubic(t);
-            const startY = topBarBottom - halfHeight - 10;
-            const endY = topBarBottom - halfHeight + 40;
-            y = startY + easedT * (endY - startY);
-            state.graphic.scale.set(Math.max(0.3, t) * state.scale);
-            state.graphic.alpha = 1;
-          } else if (phase < 0.3) {
-            // Freefall acceleration from top bar toward text
-            const t = (phase - 0.1) / 0.2;
-            const easedT = easeInQuart(t); // Accelerate during freefall
-            const startY = topBarBottom - halfHeight + 40;
-            // End when bottom edge is ~20px above text top (start deceleration zone)
-            const endY = textTop - halfHeight - 20;
-            y = startY + easedT * (endY - startY);
-            state.graphic.scale.set(state.scale);
-            state.graphic.alpha = 1;
-          } else if (phase < 0.35) {
-            // Impact deceleration: droplet's BOTTOM EDGE approaches text top
-            const t = (phase - 0.3) / 0.05;
-            const easedT = easeOutCubic(t); // Decelerate as bottom edge hits
-            const startY = textTop - halfHeight - 20;
-            const endY = textTop; // Center at textTop = bottom edge AT textTop
-            y = startY + easedT * (endY - startY);
-            state.graphic.scale.set(state.scale);
-            state.graphic.alpha = 1;
-          } else if (phase < 0.6) {
-            // Slow movement through text: bottom edge at textTop -> top edge exits textBottom
-            const t = (phase - 0.35) / 0.25;
-            const easedT = easeOutQuad(t); // Consistent easing throughout
-            const startY = textTop; // Bottom edge at textTop (center at textTop)
-            const endY = textBottom; // Top edge at textBottom (center at textBottom)
-            y = startY + easedT * (endY - startY);
-            // Gentle scale variation
-            const scaleVariation = 1 + Math.sin(t * Math.PI) * 0.1;
-            state.graphic.scale.set(state.scale * scaleVariation);
-            state.graphic.alpha = 1;
-          } else if (phase < 0.83) {
-            // Freefall acceleration after exiting text
-            const t = (phase - 0.6) / 0.23;
-            const easedT = easeInQuart(t); // Accelerate during freefall
-            const startY = textBottom; // Top edge exits textBottom
-            // End when bottom edge is ~20px above bottom puddle (start deceleration)
-            const endY = bottomPuddleSurface - halfHeight - 20;
-            y = startY + easedT * (endY - startY);
-            state.graphic.alpha = 1;
-          } else if (phase < 0.88) {
-            // Impact deceleration: droplet's BOTTOM EDGE approaches bottom puddle
-            const t = (phase - 0.83) / 0.05;
-            const easedT = easeOutCubic(t); // Decelerate as bottom edge hits
-            const startY = bottomPuddleSurface - halfHeight - 20;
-            const endY = bottomPuddleSurface; // Center at surface = bottom edge AT surface
-            y = startY + easedT * (endY - startY);
-            state.graphic.alpha = 1;
-          } else {
-            // Merge phase - fade out and reset when invisible
-            const t = (phase - 0.88) / 0.12;
-            const easedT = easeOutQuad(t);
-            y = bottomPuddleSurface + easedT * 40;
-            state.graphic.alpha = 1 - t;
-            state.graphic.scale.set(state.scale * (1 + t * 0.5));
+          const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
 
-            // Reset THIS droplet when it completes
-            if (state.graphic.alpha <= 0.01) {
-              resetDroplet(state, index);
+          // Reset on new cycle
+          if (phase < 0.01 && state.phase === "merge") {
+            state.phase = "spawn";
+            state.y = topBarBottom - halfHeight - 10;
+            state.velocity = 0;
+            resetDroplet(state, index);
+          }
+
+          // SPAWN PHASE: Emerge from top bar
+          if (state.phase === "spawn") {
+            const spawnProgress = Math.min(elapsed / 0.5, 1);
+            state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
+            state.velocity = spawnProgress * 2; // Gentle initial velocity
+            state.graphic.scale.set(Math.max(0.3, spawnProgress) * state.scale);
+            state.graphic.alpha = 1;
+
+            if (spawnProgress >= 1) {
+              state.phase = "freefall";
             }
           }
 
-          state.graphic.x = state.offset; // Now using absolute X position
-          state.graphic.y = y;
+          // COLLISION DETECTION
+          const isBottomTouchingText =
+            dropletBottom >= textTop && dropletBottom <= textTop + 5;
+          const isInsideText =
+            dropletBottom > textTop + 5 && dropletTop < textBottom - 5;
+          const isTopExitingText =
+            dropletTop >= textBottom - 5 && dropletTop <= textBottom + 5;
+          const isBottomTouchingPuddle =
+            dropletBottom >= bottomPuddleSurface - 5;
+
+          // STATE TRANSITIONS based on collision
+          if (state.phase === "freefall" && isBottomTouchingText) {
+            state.phase = "impact";
+          } else if (state.phase === "impact" && isInsideText) {
+            state.phase = "inText";
+          } else if (state.phase === "inText" && isTopExitingText) {
+            state.phase = "exit";
+          } else if (
+            state.phase === "exit" &&
+            !isInsideText &&
+            dropletTop > textBottom
+          ) {
+            state.phase = "freefall";
+          } else if (state.phase === "freefall" && isBottomTouchingPuddle) {
+            state.phase = "merge";
+          }
+
+          // APPLY PHYSICS based on current phase
+          if (state.phase === "freefall") {
+            // Accelerate with gravity
+            state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
+            state.graphic.scale.set(state.scale);
+            state.graphic.alpha = 1;
+          } else if (state.phase === "impact") {
+            // Decelerate when hitting text
+            state.velocity *= IMPACT_DECEL;
+            state.graphic.scale.set(state.scale);
+            state.graphic.alpha = 1;
+          } else if (state.phase === "inText") {
+            // Slow movement with friction
+            state.velocity *= TEXT_FRICTION;
+            // Gentle scale variation
+            const textProgress =
+              (dropletBottom - textTop) / (textBottom - textTop);
+            const scaleVariation = 1 + Math.sin(textProgress * Math.PI) * 0.1;
+            state.graphic.scale.set(state.scale * scaleVariation);
+            state.graphic.alpha = 1;
+          } else if (state.phase === "exit") {
+            // Gradually accelerate when exiting
+            state.velocity += EXIT_ACCEL;
+            state.graphic.scale.set(state.scale);
+            state.graphic.alpha = 1;
+          } else if (state.phase === "merge") {
+            // Merge into puddle
+            state.velocity *= 0.8;
+            const mergeProgress =
+              (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
+            const mergeFade = Math.max(0, 1 - (mergeProgress - 0.88) / 0.12);
+            state.graphic.alpha = mergeFade;
+            state.graphic.scale.set(state.scale * (1 + (1 - mergeFade) * 0.5));
+          }
+
+          // Update position with velocity
+          state.y += state.velocity * dt * 60; // Normalize by 60fps
+
+          // Apply position
+          state.graphic.x = state.offset;
+          state.graphic.y = state.y;
         });
       };
 
