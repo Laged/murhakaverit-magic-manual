@@ -458,8 +458,9 @@ export default function PixiDropletIndividual() {
             state.graphic.scale.set(Math.max(0.3, t) * state.scale);
             state.graphic.alpha = 1;
           } else if (phase < 0.35) {
+            // Decelerate as droplet impacts text top (like hitting a puddle)
             const t = (phase - 0.1) / 0.25;
-            const easedT = easeInQuart(t);
+            const easedT = easeOutCubic(t); // Decelerate at end for impact feel
             const startY = topBarBottom - halfHeight + 40;
             const endY = textTop - halfHeight;
             y = startY + easedT * (endY - startY);
@@ -477,8 +478,9 @@ export default function PixiDropletIndividual() {
             state.graphic.scale.set(state.scale * scaleVariation);
             state.graphic.alpha = 1;
           } else if (phase < 0.88) {
+            // Decelerate as droplet impacts bottom bar (like hitting a puddle)
             const t = (phase - 0.6) / 0.28;
-            const easedT = easeInQuart(t);
+            const easedT = easeOutCubic(t); // Decelerate at end for impact feel
             const startY = textBottom - halfHeight;
             const endY = bottomPuddleSurface - halfHeight;
             y = startY + easedT * (endY - startY);
