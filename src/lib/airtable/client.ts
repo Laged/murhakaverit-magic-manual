@@ -128,14 +128,13 @@ export async function submitRegistration(
         Ruokavalio: data.Ruokavalio,
         Kuljetus: data.Kuljetus,
         Pelikiinnostus: data.Pelikiinnostus,
+        Roolipelikiinnostus: data.Roolipelikiinnostus,
         "Tulen paikalle": data["Tulen paikalle"],
         Allergiat: data.Allergiat || "",
-        "Terveydellisiä huomioita järjestäjälle":
-          data["Terveydellisiä huomioita järjestäjälle"] || "",
+        Terveyshuomioita: data.Terveyshuomioita || "",
         Majoitukset: data.Majoitukset || "",
         Majoitus: data.Majoitus, // Array of record IDs for linked records
-        "Osoitetiedot laskusta varten":
-          data["Osoitetiedot laskusta varten"] || "",
+        Laskutustiedot: data.Laskutustiedot || "",
       },
     }),
   });
