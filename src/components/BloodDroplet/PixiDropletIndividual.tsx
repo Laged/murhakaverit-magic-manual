@@ -384,11 +384,11 @@ export default function PixiDropletIndividual() {
         debugBorder.stroke({ color: 0x0000ff, width: 3 }); // Blue, 3px wide
       };
 
-      // Initialize all droplets
+      // Layout first, THEN initialize droplets (so text bounds are correct)
+      layout();
       droplets.forEach((state, i) => {
         resetDroplet(state, i);
       });
-      layout();
 
       const tick = (ticker: Ticker) => {
         const dt = ticker.deltaTime / 60;
@@ -465,32 +465,21 @@ export default function PixiDropletIndividual() {
             y = startY + easedT * (endY - startY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
-          } else if (phase < 0.45) {
-            const t = (phase - 0.35) / 0.1;
-            const easedT = easeOutCubic(t);
-            const distance = (textBottom - textTop) * 0.15;
-            y = textTop - halfHeight + easedT * distance;
-            state.graphic.scale.set(state.scale * (1 + t * 0.15));
-            state.graphic.alpha = 1;
           } else if (phase < 0.6) {
-            const t = (phase - 0.45) / 0.15;
-            const easedT = easeOutQuad(t);
-            const startY = textTop - halfHeight + (textBottom - textTop) * 0.15;
-            const distance = (textBottom - textTop) * 0.5;
-            y = startY + easedT * distance;
-            state.graphic.scale.set(state.scale * (1.15 - t * 0.15));
-            state.graphic.alpha = 1;
-          } else if (phase < 0.68) {
-            const t = (phase - 0.6) / 0.08;
-            const easedT = easeInCubic(t);
-            const startY = textTop - halfHeight + (textBottom - textTop) * 0.65;
-            const endY = textBottom - halfHeight + 50;
+            // Smooth deceleration through entire text area
+            const t = (phase - 0.35) / 0.25;
+            const easedT = easeOutQuad(t); // Consistent easing throughout
+            const startY = textTop - halfHeight;
+            const endY = textBottom - halfHeight;
             y = startY + easedT * (endY - startY);
+            // Gentle scale variation
+            const scaleVariation = 1 + Math.sin(t * Math.PI) * 0.1;
+            state.graphic.scale.set(state.scale * scaleVariation);
             state.graphic.alpha = 1;
           } else if (phase < 0.88) {
-            const t = (phase - 0.68) / 0.2;
+            const t = (phase - 0.6) / 0.28;
             const easedT = easeInQuart(t);
-            const startY = textBottom - halfHeight + 50;
+            const startY = textBottom - halfHeight;
             const endY = bottomPuddleSurface - halfHeight;
             y = startY + easedT * (endY - startY);
             state.graphic.alpha = 1;
