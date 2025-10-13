@@ -13,12 +13,12 @@ import { useEffect, useRef } from "react";
 
 // === ANIMATION CONFIGURATION ===
 const NUM_DROPLETS = 6;
-const ANIMATION_DURATION = 5.0; // seconds per loop
+//const ANIMATION_DURATION = 5.0; // seconds per loop
 const TITLE_INTRO_DURATION = 1.2; // seconds
 
 // === GOO EFFECT CONFIGURATION ===
 // These control the "gooeyness" of the blood droplet merging effect
-const BLUR_STRENGTH = 25; // Higher = more blur (original: 20, test had 16)
+const BLUR_STRENGTH = 20; // Higher = more blur (original: 20, test had 16)
 const BLUR_QUALITY = 10; // Higher = smoother blur (1-15)
 const ALPHA_MULTIPLY = 20; // Alpha contrast multiply (original: 15)
 const ALPHA_OFFSET = -5; // Alpha contrast offset (original: -5)
@@ -30,7 +30,7 @@ const DROPLET_BASE_HEIGHT = 62;
 const DROPLET_BASE_SIZE = 1.0; // Scale multiplier for all droplets
 
 // === DROPLET BEHAVIOR ===
-const DROPLET_MIN_SCALE = 0.5;
+const DROPLET_MIN_SCALE = 0.7;
 const DROPLET_MAX_SCALE = 1.0;
 const DROPLET_MAX_DELAY = 1.25; // seconds
 const _DROPLET_MIN_OFFSET = 15; // percentage (unused, legacy)
@@ -286,7 +286,7 @@ export default function PixiDropletIndividual() {
 
       // Adjust blur and alpha for mobile - less blur so droplets are visible
       if (isMobile) {
-        blurFilter.strength = 15;
+        blurFilter.strength = 20;
         alphaMatrix.matrix[14] = 10; // Reduce alpha multiply
         alphaMatrix.matrix[19] = -3; // Reduce alpha offset
       }
@@ -302,10 +302,11 @@ export default function PixiDropletIndividual() {
         crispContainer.addChild(debugBox);
 
         const scaleRange = DROPLET_MAX_SCALE - DROPLET_MIN_SCALE;
+        const minScale = isMobile ? DROPLET_MIN_SCALE * 0.5 : DROPLET_MIN_SCALE;
         droplets.push({
           graphic,
           debugBox,
-          scale: DROPLET_MIN_SCALE + Math.random() * scaleRange,
+          scale: minScale + Math.random() * scaleRange,
           elapsedTime: 0,
           delay: Math.random() * DROPLET_MAX_DELAY,
           offset: 0, // Will be set by resetDroplet based on text bounds
@@ -322,40 +323,62 @@ export default function PixiDropletIndividual() {
       };
 
       const drawDroplet = (graphic: Graphics, scale: number) => {
-        const baseSize = DROPLET_BASE_SIZE;
-        const w = DROPLET_BASE_WIDTH * scale * baseSize;
-        const h = DROPLET_BASE_HEIGHT * scale * baseSize;
+        const mobileScaleDown = 0.7;
+        const baseSize = isMobile
+          ? DROPLET_BASE_SIZE * mobileScaleDown
+          : DROPLET_BASE_SIZE;
+        const baseW = isMobile
+          ? DROPLET_BASE_WIDTH * mobileScaleDown
+          : DROPLET_BASE_WIDTH;
+        const baseH = isMobile
+          ? DROPLET_BASE_HEIGHT * 0.5
+          : DROPLET_BASE_HEIGHT;
+        const w = baseW * scale * baseSize;
+        const h = baseH * scale * baseSize;
 
-        // DRAMATIC variation
-        const tipOffsetX = (Math.random() * 2 - 1) * TIP_OFFSET_VARIATION;
-        const tipOffsetY = (Math.random() * 2 - 1) * TIP_OFFSET_VARIATION;
+        // Organic variation
+        const tipOffsetX = (Math.random() * 2 - 1) * TIP_OFFSET_VARIATION * 0.7;
+        const tipOffsetY = (Math.random() * 2 - 1) * TIP_OFFSET_VARIATION * 0.7;
+        const neckLength = 2.6 + Math.random() * 0.2; // even longer, thinner neck
+        const bellyBulge = 0.65 + Math.random() * 0.15; // wider belly
+        const bellyDrop = 0.15 + Math.random() * 0.05; // pushes the belly lower
+        const asym = (Math.random() * 2 - 1) * 0.12; // small asymmetry
 
         graphic.clear();
-        graphic.moveTo(tipOffsetX, tipOffsetY - h / 2);
+
+        // Tip of droplet (thin neck start)
+        graphic.moveTo(tipOffsetX, tipOffsetY - h * 0.5 * neckLength);
+
+        // Left side — narrow neck, aggressive outward curve
         graphic.bezierCurveTo(
-          -w * 0.3,
-          -h * 0.2,
-          -w * 0.45,
-          h * 0.1,
-          -w * 0.4,
-          h * 0.35,
+          -w * 0.01, // control1 x — keep neck razor-thin
+          -h * 0.1, // control1 y — slightly below tip
+          -w * 1.0 * bellyBulge, // control2 x — push far outward
+          h * (0.3 + bellyDrop), // control2 y — push curvature lower
+          -w * 0.6 * bellyBulge, // end x — lower left point of belly
+          h * (0.6 + bellyDrop), // end y
         );
+
+        // Bottom curve — deep, round, wide belly
         graphic.bezierCurveTo(
-          -w * 0.25,
-          h * 0.5,
-          w * 0.25,
-          h * 0.5,
-          w * 0.4,
-          h * 0.35,
+          -w * 0.4 * bellyBulge, // control1 x
+          h * (0.9 + bellyDrop), // control1 y — deeper belly base
+          w * 0.4 * bellyBulge, // control2 x
+          h * (0.9 + bellyDrop), // control2 y
+          w * 0.6 * bellyBulge, // end x
+          h * (0.6 + bellyDrop), // end y
         );
+
+        // Right side — mirror up, with small organic offset
         graphic.bezierCurveTo(
-          w * 0.45,
-          h * 0.1,
-          w * 0.3,
-          -h * 0.2,
+          w * 1.0 * bellyBulge, // control1 x — mirror the left bulge
+          h * (0.3 + bellyDrop), // control1 y
+          w * (0.015 + asym), // control2 x — narrow neck
+          -h * 0.1, // control2 y
           tipOffsetX,
-          tipOffsetY - h / 2,
+          tipOffsetY - h * 0.5 * neckLength,
         );
+
         graphic.fill({ color: 0xffffff, alpha: 1 });
       };
 
@@ -471,8 +494,14 @@ export default function PixiDropletIndividual() {
           }
 
           // Calculate droplet dimensions (per-droplet size!)
-          const baseSize = 1.5;
-          const dropletHeight = DROPLET_BASE_HEIGHT * state.scale * baseSize;
+          const mobileScaleDown = isMobile ? 0.7 : 1;
+          const physBaseSize = isMobile
+            ? DROPLET_BASE_SIZE * mobileScaleDown
+            : DROPLET_BASE_SIZE;
+          const physBaseH = isMobile
+            ? DROPLET_BASE_HEIGHT * 0.5
+            : DROPLET_BASE_HEIGHT;
+          const dropletHeight = physBaseH * state.scale * physBaseSize;
           const halfHeight = dropletHeight / 2;
 
           // Get collision surfaces
@@ -499,11 +528,11 @@ export default function PixiDropletIndividual() {
 
           // SPAWN PHASE: Emerge from top bar
           if (state.phase === "spawn") {
+            const velocityScale = isMobile ? 0.1 : 1.0;
             const spawnProgress = Math.min(elapsed / 0.5, 1.0);
             const spawnThreshold = 0.9;
-            const spawnGrowth = 0.5;
             state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
-            state.velocity = spawnProgress * 2; // Gentle initial velocity
+            state.velocity = spawnProgress * 2 * velocityScale; // Gentle initial velocity
             state.graphic.scale.set(Math.max(0.5, spawnProgress) * state.scale);
             state.graphic.alpha = 1;
 
@@ -554,7 +583,12 @@ export default function PixiDropletIndividual() {
           // APPLY PHYSICS based on current phase
           if (state.phase === "freefall") {
             // Accelerate with gravity
-            state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
+            const velocityScale = isMobile ? 0.85 : 1;
+            state.velocity = Math.min(
+              state.velocity + GRAVITY * velocityScale,
+              MAX_VELOCITY,
+            );
+            //state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (
@@ -599,8 +633,9 @@ export default function PixiDropletIndividual() {
                 (EXIT_FRICTION - MIDDLE_FRICTION) * exitProgress;
             }
 
-            state.velocity *= frictionFactor;
-            state.velocity = Math.max(state.velocity, MIN_VELOCITY);
+            const velocityScale = isMobile ? 0.5 : 1;
+            state.velocity *= frictionFactor * velocityScale;
+            state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
 
             // Visual effects for text only
             if (state.phase === "inText") {
@@ -613,7 +648,8 @@ export default function PixiDropletIndividual() {
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
             // Merge into puddle - slow down but keep minimum velocity
-            state.velocity *= 0.7;
+            const velocityScale = isMobile ? 0.1 : 0.7;
+            state.velocity *= velocityScale;
             state.velocity = Math.max(state.velocity, MIN_VELOCITY);
             const mergeProgress = (dropletBottom - bottomPuddleSurface) / 40;
             const mergeFade = Math.max(0, 1 - mergeProgress);
@@ -630,19 +666,42 @@ export default function PixiDropletIndividual() {
 
           // Draw debug bounding box
           if (DEBUG_SHOW_BOUNDING_BOXES) {
-            const baseSize = 1.5;
-            const dropletWidth = DROPLET_BASE_WIDTH * state.scale * baseSize;
-            const dropletHeight = DROPLET_BASE_HEIGHT * state.scale * baseSize;
+            const mobileScaleDown = 0.5;
+            const baseW = isMobile
+              ? DROPLET_BASE_WIDTH * mobileScaleDown
+              : DROPLET_BASE_WIDTH;
+            const baseH = isMobile
+              ? DROPLET_BASE_HEIGHT * 0.5
+              : DROPLET_BASE_HEIGHT;
 
             state.debugBox.clear();
             // Draw box centered on droplet position
+            let currentColor = 0xffffff;
+            switch (state.phase) {
+              case "freefall":
+                currentColor = 0x00ff00;
+                break;
+              case "inTopBar":
+                currentColor = 0xffff00;
+                break;
+              case "inText":
+                currentColor = 0x0000ff;
+                break;
+              case "inBottomBar":
+                currentColor = 0x00000;
+                break;
+              default:
+                currentColor = 0xffffff;
+                break;
+            }
+
             state.debugBox.rect(
-              state.offset - dropletWidth / 2,
-              state.y - dropletHeight / 2,
-              dropletWidth,
-              dropletHeight,
+              state.offset - baseW / 2,
+              state.y - baseH / 2,
+              baseW,
+              baseH,
             );
-            state.debugBox.stroke({ color: 0x00ff00, width: 2 }); // Green box
+            state.debugBox.stroke({ color: currentColor, width: 2 }); // Green box
             state.debugBox.alpha = state.graphic.alpha; // Match droplet alpha
           } else {
             state.debugBox.clear(); // Hide if debug disabled
