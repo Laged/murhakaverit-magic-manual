@@ -142,6 +142,33 @@
   opacity: 0.7;
 }
 
+.infoList {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: clamp(0.95rem, 2.1vw, 1.15rem);
+  line-height: 1.8;
+  color: var(--sauna-body-color, #000000);
+  font-style: italic;
+  list-style: none;
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  background: rgba(136, 8, 8, 0.03);
+  border-left: 3px solid #880808;
+}
+
+.infoList li {
+  margin-bottom: 0.5rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.infoList li::before {
+  content: "–";
+  color: #880808;
+  font-weight: 600;
+  position: absolute;
+  left: 0;
+}
+
 .highlight {
   background: #fff9e6;
   padding: 1rem 1.25rem;

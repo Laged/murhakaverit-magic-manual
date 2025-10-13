@@ -32,7 +32,7 @@
 }
 
 .required {
-  color: #dc2626;
+  color: #880808;
   margin-left: 0.25rem;
 }
 
@@ -212,6 +212,32 @@
   color: #15803d;
   line-height: 1.6;
   font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.homeLink {
+  display: inline-block;
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1rem;
+  color: #166534;
+  text-decoration: none;
+  border: 3px solid #166534;
+  padding: 0.75rem 1.5rem;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.homeLink:hover {
+  background: #166534;
+  color: #ffffff;
+  box-shadow: 6px 6px 0 #86efac;
+  transform: translate(-2px, -2px);
 }
 
 .summarySection {
