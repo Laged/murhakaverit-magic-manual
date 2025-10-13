@@ -450,6 +450,7 @@ export default function PixiDropletIndividual() {
             t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
 
           if (phase < 0.1) {
+            // Spawn phase: droplet emerges from top bar
             const t = phase / 0.1;
             const easedT = easeInOutCubic(t);
             const startY = topBarBottom - halfHeight - 10;
@@ -457,39 +458,58 @@ export default function PixiDropletIndividual() {
             y = startY + easedT * (endY - startY);
             state.graphic.scale.set(Math.max(0.3, t) * state.scale);
             state.graphic.alpha = 1;
-          } else if (phase < 0.35) {
-            // Decelerate as droplet impacts text top (like hitting a puddle)
-            const t = (phase - 0.1) / 0.25;
-            const easedT = easeOutCubic(t); // Decelerate at end for impact feel
+          } else if (phase < 0.3) {
+            // Freefall acceleration from top bar toward text
+            const t = (phase - 0.1) / 0.2;
+            const easedT = easeInQuart(t); // Accelerate during freefall
             const startY = topBarBottom - halfHeight + 40;
-            const endY = textTop - halfHeight;
+            // End when bottom edge is ~20px above text top (start deceleration zone)
+            const endY = textTop - halfHeight - 20;
+            y = startY + easedT * (endY - startY);
+            state.graphic.scale.set(state.scale);
+            state.graphic.alpha = 1;
+          } else if (phase < 0.35) {
+            // Impact deceleration: droplet's BOTTOM EDGE approaches text top
+            const t = (phase - 0.3) / 0.05;
+            const easedT = easeOutCubic(t); // Decelerate as bottom edge hits
+            const startY = textTop - halfHeight - 20;
+            const endY = textTop; // Center at textTop = bottom edge AT textTop
             y = startY + easedT * (endY - startY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (phase < 0.6) {
-            // Smooth deceleration through entire text area
+            // Slow movement through text: bottom edge at textTop -> top edge exits textBottom
             const t = (phase - 0.35) / 0.25;
             const easedT = easeOutQuad(t); // Consistent easing throughout
-            const startY = textTop - halfHeight;
-            const endY = textBottom - halfHeight;
+            const startY = textTop; // Bottom edge at textTop (center at textTop)
+            const endY = textBottom; // Top edge at textBottom (center at textBottom)
             y = startY + easedT * (endY - startY);
             // Gentle scale variation
             const scaleVariation = 1 + Math.sin(t * Math.PI) * 0.1;
             state.graphic.scale.set(state.scale * scaleVariation);
             state.graphic.alpha = 1;
+          } else if (phase < 0.83) {
+            // Freefall acceleration after exiting text
+            const t = (phase - 0.6) / 0.23;
+            const easedT = easeInQuart(t); // Accelerate during freefall
+            const startY = textBottom; // Top edge exits textBottom
+            // End when bottom edge is ~20px above bottom puddle (start deceleration)
+            const endY = bottomPuddleSurface - halfHeight - 20;
+            y = startY + easedT * (endY - startY);
+            state.graphic.alpha = 1;
           } else if (phase < 0.88) {
-            // Decelerate as droplet impacts bottom bar (like hitting a puddle)
-            const t = (phase - 0.6) / 0.28;
-            const easedT = easeOutCubic(t); // Decelerate at end for impact feel
-            const startY = textBottom - halfHeight;
-            const endY = bottomPuddleSurface - halfHeight;
+            // Impact deceleration: droplet's BOTTOM EDGE approaches bottom puddle
+            const t = (phase - 0.83) / 0.05;
+            const easedT = easeOutCubic(t); // Decelerate as bottom edge hits
+            const startY = bottomPuddleSurface - halfHeight - 20;
+            const endY = bottomPuddleSurface; // Center at surface = bottom edge AT surface
             y = startY + easedT * (endY - startY);
             state.graphic.alpha = 1;
           } else {
             // Merge phase - fade out and reset when invisible
             const t = (phase - 0.88) / 0.12;
             const easedT = easeOutQuad(t);
-            y = bottomPuddleSurface - halfHeight + easedT * 40;
+            y = bottomPuddleSurface + easedT * 40;
             state.graphic.alpha = 1 - t;
             state.graphic.scale.set(state.scale * (1 + t * 0.5));
 
