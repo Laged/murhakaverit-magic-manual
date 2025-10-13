@@ -331,11 +331,21 @@ export default function PixiDropletIndividual() {
       // Reset individual droplet
       const resetDroplet = (state: DropletState, _dropletIndex: number) => {
         const scaleRange = mobileMaxScale - mobileMinScale;
-        const offsetRange = mobileMaxOffset - mobileMinOffset;
         state.scale = mobileMinScale + Math.random() * scaleRange;
         state.elapsedTime = 0;
         state.delay = Math.random() * DROPLET_MAX_DELAY;
-        state.offset = mobileMinOffset + Math.random() * offsetRange;
+
+        // Calculate droplet position based on actual text bounds
+        const textBounds = titleText.getBounds();
+        const textLeft = textBounds.x;
+        const textRight = textBounds.x + textBounds.width;
+        const textWidth = textBounds.width;
+
+        // Random position within text bounds (with small margin)
+        const margin = textWidth * 0.05; // 5% margin on each side
+        const minX = textLeft + margin;
+        const maxX = textRight - margin;
+        state.offset = minX + Math.random() * (maxX - minX);
 
         // KEY: clear() + redraw
         drawDroplet(state.graphic, state.scale);
@@ -478,7 +488,7 @@ export default function PixiDropletIndividual() {
             }
           }
 
-          state.graphic.x = (state.offset / 100) * width;
+          state.graphic.x = state.offset; // Now using absolute X position
           state.graphic.y = y;
         });
       };
