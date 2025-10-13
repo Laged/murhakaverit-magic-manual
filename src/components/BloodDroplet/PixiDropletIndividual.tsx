@@ -40,8 +40,16 @@ const DROPLET_MAX_OFFSET = 75; // percentage
 const RED_LAYER_STROKE_WIDTH_MULTIPLIER = 0.03; // Larger stroke for red layer
 const TIP_OFFSET_VARIATION = 10; // pixels (how much droplet shapes vary)
 
+// === PHYSICS CONSTANTS (TUNE THESE!) ===
+const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
+const MAX_VELOCITY = 12; // Terminal velocity (max fall speed)
+const TEXT_FRICTION = 0.88; // Friction inside text (0.88 = 12% loss per frame, higher = slower)
+const MIN_VELOCITY = 1.5; // Minimum velocity - ensures droplets always fall
+const DEBUG_SHOW_BOUNDING_BOXES = true; // Show droplet bounding boxes for debugging
+
 interface DropletState {
   graphic: Graphics;
+  debugBox: Graphics; // Visual bounding box for debugging
   scale: number;
   elapsedTime: number;
   delay: number;
@@ -277,9 +285,15 @@ export default function PixiDropletIndividual() {
       for (let i = 0; i < mobileDropletCount; i++) {
         const graphic = new Graphics();
         root.addChild(graphic);
+
+        // Create debug bounding box (added to crisp container to avoid filters)
+        const debugBox = new Graphics();
+        crispContainer.addChild(debugBox);
+
         const scaleRange = DROPLET_MAX_SCALE - DROPLET_MIN_SCALE;
         droplets.push({
           graphic,
+          debugBox,
           scale: DROPLET_MIN_SCALE + Math.random() * scaleRange,
           elapsedTime: 0,
           delay: Math.random() * DROPLET_MAX_DELAY,
@@ -462,12 +476,7 @@ export default function PixiDropletIndividual() {
           const dropletTop = state.y - halfHeight;
 
           // === VELOCITY-BASED PHYSICS WITH COLLISION DETECTION ===
-
-          // Physics constants
-          const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
-          const MAX_VELOCITY = 12; // Terminal velocity
-          const TEXT_FRICTION = 0.75; // Friction inside text (75% of velocity retained = 25% loss per frame)
-          const MIN_VELOCITY = 0.5; // Minimum velocity to prevent complete stop
+          // (Physics constants are at top of file for easy tuning)
 
           const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
 
@@ -532,22 +541,41 @@ export default function PixiDropletIndividual() {
             state.graphic.scale.set(state.scale * scaleVariation);
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
-            // Merge into puddle - STOP MOVING, just fade out
-            state.velocity = 0; // Stop all movement
+            // Merge into puddle - slow down but keep minimum velocity
+            state.velocity *= 0.7; // Decelerate
+            state.velocity = Math.max(state.velocity, MIN_VELOCITY); // But always keep moving
             const mergeProgress = (dropletBottom - bottomPuddleSurface) / 40;
             const mergeFade = Math.max(0, 1 - mergeProgress);
             state.graphic.alpha = mergeFade;
             state.graphic.scale.set(state.scale * (1 + mergeProgress * 0.3));
           }
 
-          // Update position with velocity (only if not merging)
-          if (state.phase !== "merge") {
-            state.y += state.velocity * dt * 60; // Normalize by 60fps
-          }
+          // Update position with velocity (always - MIN_VELOCITY ensures movement)
+          state.y += state.velocity * dt * 60; // Normalize by 60fps
 
           // Apply position
           state.graphic.x = state.offset;
           state.graphic.y = state.y;
+
+          // Draw debug bounding box
+          if (DEBUG_SHOW_BOUNDING_BOXES) {
+            const baseSize = 1.5;
+            const dropletWidth = DROPLET_BASE_WIDTH * state.scale * baseSize;
+            const dropletHeight = DROPLET_BASE_HEIGHT * state.scale * baseSize;
+
+            state.debugBox.clear();
+            // Draw box centered on droplet position
+            state.debugBox.rect(
+              state.offset - dropletWidth / 2,
+              state.y - dropletHeight / 2,
+              dropletWidth,
+              dropletHeight,
+            );
+            state.debugBox.stroke({ color: 0x00ff00, width: 2 }); // Green box
+            state.debugBox.alpha = state.graphic.alpha; // Match droplet alpha
+          } else {
+            state.debugBox.clear(); // Hide if debug disabled
+          }
         });
       };
 
