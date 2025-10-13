@@ -27,7 +27,7 @@ export default function SignUpForm({
   const allergiatId = useId();
   const kuljetusId = useId();
   const pelikiinnostusId = useId();
-  const roolipeliId = useId();
+  // const roolipeliId = useId(); // Commented out - field is hidden
   const tulenPaikalleId = useId();
   const majoitusId = useId();
   const huomioId = useId();
@@ -37,7 +37,7 @@ export default function SignUpForm({
     Nimi: "",
     Maili: "",
     Puhnro: "",
-    Laskutusosoite: "",
+    Laskutustiedot: "",
     Ruokavalio: [] as string[],
     Kuljetus: "",
     Pelikiinnostus: [] as string[],
@@ -76,7 +76,11 @@ export default function SignUpForm({
     if (!formData.Maili) newErrors.Maili = "Maili vaaditaan";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.Maili))
       newErrors.Maili = "Virheellinen sähköpostiosoite";
-    if (!formData.Puhnro) newErrors.Puhnro = "Puhelinnumero vaaditaan";
+    if (!formData.Puhnro) {
+      newErrors.Puhnro = "Puhelinnumero vaaditaan";
+    } else if (!/^[\d\s+\-()]+$/.test(formData.Puhnro)) {
+      newErrors.Puhnro = "Virheellinen puhelinnumero";
+    }
     if (formData.Ruokavalio.length === 0)
       newErrors.Ruokavalio = "Valitse vähintään yksi vaihtoehto";
     if (!formData.Kuljetus) newErrors.Kuljetus = "Kuljetus vaaditaan";
@@ -115,6 +119,37 @@ export default function SignUpForm({
         toast.success("Ilmoittautuminen onnistui!");
       } else {
         toast.error(data.error || "Ilmoittautuminen epäonnistui");
+
+        // If error is about full accommodation, automatically deselect unavailable ones
+        if (data.error?.includes("täynnä")) {
+          // Fetch fresh accommodation data
+          const optionsResponse = await fetch("/api/get-form-options");
+          const optionsData = await optionsResponse.json();
+
+          if (optionsData.success && optionsData.options) {
+            // Update options to show current availability
+            _setOptions(optionsData.options);
+
+            // Auto-deselect any selected accommodations that are now full
+            const availableMajoitusIds = optionsData.options.majoitus
+              .filter(
+                (m: { available?: number }) =>
+                  m.available === undefined || m.available > 0,
+              )
+              .map((m: { id: string }) => m.id);
+
+            setFormData((prev) => ({
+              ...prev,
+              Majoitus: prev.Majoitus.filter((id) =>
+                availableMajoitusIds.includes(id),
+              ),
+            }));
+
+            toast("Täydet majoitukset poistettu valinnasta automaattisesti.", {
+              icon: "ℹ️",
+            });
+          }
+        }
       }
     } catch {
       toast.error("Verkkovirhe. Yritä uudelleen.");
@@ -128,7 +163,7 @@ export default function SignUpForm({
       Nimi: "",
       Maili: "",
       Puhnro: "",
-      Laskutusosoite: "",
+      Laskutustiedot: "",
       Ruokavalio: [],
       Kuljetus: "",
       Pelikiinnostus: [],
@@ -158,6 +193,9 @@ export default function SignUpForm({
             Ilmoittautumisesi on vastaanotettu. Saat lisätietoja sähköpostitse
             lähempänä tapahtumaa.
           </p>
+          <a href="/" className={styles.homeLink}>
+            ← Palaa kotisivulle
+          </a>
         </div>
 
         <div className={styles.summarySection}>
@@ -237,6 +275,7 @@ export default function SignUpForm({
             className={styles.input}
             value={formData.Nimi}
             placeholder="Etunimi Sukunimi"
+            autoComplete="name"
             onChange={(e) => setFormData({ ...formData, Nimi: e.target.value })}
             disabled={isSubmitting}
           />
@@ -260,6 +299,7 @@ export default function SignUpForm({
             className={styles.input}
             value={formData.Maili}
             placeholder="osote@mail.com"
+            autoComplete="email"
             onChange={(e) =>
               setFormData({ ...formData, Maili: e.target.value })
             }
@@ -285,6 +325,7 @@ export default function SignUpForm({
             className={styles.input}
             value={formData.Puhnro}
             placeholder="+358123456789"
+            autoComplete="tel"
             onChange={(e) =>
               setFormData({ ...formData, Puhnro: e.target.value })
             }
@@ -292,24 +333,24 @@ export default function SignUpForm({
           />
         </div>
 
-        {/* Laskutusosoite */}
+        {/* Laskutustiedot */}
         <div className={styles.field}>
           <div className={styles.fieldTitle}>
             <label htmlFor={laskutusId} className={styles.label}>
-              Laskutusosoite <span className={styles.required}>*</span>
+              Laskutustiedot <span className={styles.required}>*</span>
             </label>
             <div className={styles.errorContainer}>
-              {errors.Laskutusosoite && (
-                <span className={styles.error}>{errors.Laskutusosoite}</span>
+              {errors.Laskutustiedot && (
+                <span className={styles.error}>{errors.Laskutustiedot}</span>
               )}
             </div>
           </div>
           <textarea
             id={laskutusId}
             className={styles.textarea}
-            value={formData.Laskutusosoite}
+            value={formData.Laskutustiedot}
             onChange={(e) =>
-              setFormData({ ...formData, Laskutusosoite: e.target.value })
+              setFormData({ ...formData, Laskutustiedot: e.target.value })
             }
             placeholder="Murhaajankatu 221B, 00100, Helsinki"
             disabled={isSubmitting}
@@ -432,8 +473,8 @@ export default function SignUpForm({
           </div>
         </div>
 
-        {/* Roolipelikiinnostus */}
-        <div className={styles.field}>
+        {/* Roolipelikiinnostus - Hidden for now */}
+        {/* <div className={styles.field}>
           <div className={styles.fieldTitle}>
             <label htmlFor={roolipeliId} className={styles.label}>
               Roolipelaan mielelläni <span className={styles.required}>*</span>
@@ -461,7 +502,7 @@ export default function SignUpForm({
               disabled={isSubmitting}
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Tulen paikalle */}
         <div className={styles.field}>
@@ -544,13 +585,13 @@ export default function SignUpForm({
         {/* Majoitushuomioita */}
         <div className={styles.field}>
           <label htmlFor={huomioId} className={styles.label}>
-            Majoitushuomioita
+            Majoitushuomioita (esim. majoitus kaverin X kanssa)
           </label>
           <textarea
             id={terveysId}
             className={styles.textarea}
             value={formData.Majoitushuomioita}
-            placeholder="Nukun missä tahansa, paitsi Villen pikkulusikkana. Iso lusikka OK."
+            placeholder="Samaan majoitukseen Villen kanssa. Nukun missä tahansa, paitsi Villen pikkulusikkana. Iso lusikka OK."
             onChange={(e) =>
               setFormData({
                 ...formData,

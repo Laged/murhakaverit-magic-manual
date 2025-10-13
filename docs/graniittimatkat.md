@@ -2,7 +2,7 @@
 
 Graniittimatkan seikkailut kutsuvat jälleen 7.5. - 10.5.2026!
 
-Kaipaatko silmiä siristäviä löylyjä graniittisaunassa, kutkuttavia mysteereitä ja lupaa tehdä katalia petoksia? Olitpa sitten kokenut, mutta epäonnekas seikkailija, jolle Faaraon kirous jäi viime kerralla hampaankoloon tai innokas tulokas, joka janoo Kaken legendaarista tomaatti-sellerisoppaa  – meillä on tarjota sinulle jotakin aivan uskomatonta.
+Kaipaatko silmiä siristäviä löylyjä graniittisaunassa, kutkuttavia mysteereitä ja lupaa tehdä katalia petoksia? Olitpa sitten kokenut, mutta epäonnekas seikkailija, jolle Faaraon kirous jäi viime kerralla hampaankoloon tai innokas tulokas, joka janoaa Kaken legendaarista tomaatti-sellerisoppaa  – meillä on tarjota sinulle jotakin aivan uskomatonta.
 
 Graniittimatkat suuntaavat jälleen tuttuihin maisemiin, idylliseen Storfinnhova Gårdiin, ensi vuoden toukokuussa. Yleisön pyynnöstä aloitamme murharituaalit jo torstaina ja päätämme ne sunnuntaina.
 

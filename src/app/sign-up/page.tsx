@@ -40,22 +40,30 @@ export default async function SignUpPage() {
               </p>
               <div className={styles.descriptionContainer}>
                 <p className={styles.description}>
-                  Olet jo toivottavsti Whatsapp-ryhmässämme ja saanut tiedot
-                  tapahtumasta. Hintaa tulee Majoitukset+sauna+ruuat =
-                  ~250e/hlö. Toistaiseksi jokainen osallistuja joutuu
-                  ilmoittautumaan erikseen. Laita siellä viestiä, jos
-                  ilmoittautumisesta herää kysymyksiä näiden lisäksi:
+                  Olet jo toivottavasti Whatsapp-ryhmässämme ja saanut tiedot
+                  tapahtumasta. Laita siellä viestiä, jos ilmoittautumisesta
+                  herää kysymyksiä:
                 </p>
-                <p className={styles.description}>
-                  Puumajoja on 4kpl, jokaiseen mahtuu 3hlö, mutta on OK varata
-                  niitä kahdestaankin.
-                </p>
-                <p className={styles.description}>
-                  Glamping telttoja on 3kpl, jokaiseen mahtuu 2hlö.
-                </p>
-                <p className={styles.description}>
-                  Hinta arviolta majoitus+sauna+ruoka = ~250e/hlö.
-                </p>
+                <ul className={styles.infoList}>
+                  <li>
+                    Toistaiseksi jokainen osallistuja joutuu ilmoittautumaan
+                    erikseen.
+                  </li>
+                  <li>
+                    Puumajoja on 4kpl, jokaiseen mahtuu 3hlö, mutta on OK varata
+                    niitä kahdestaankin.
+                  </li>
+                  <li>Glamping telttoja on 3kpl, jokaiseen mahtuu 2hlö.</li>
+                  <li>Oma teltta voidaan koittaa järjestää, ei lupauksia.</li>
+                  <li>
+                    "Ihan sama" majoituksella hyväksyt minkä tahansa yöpaikan.
+                  </li>
+                  <li>
+                    Nopeiten ilmoittautuneet saavat majoituspaikkansa
+                    priorisoituna.
+                  </li>
+                  <li>Hinta arviolta majoitus+sauna+ruoka = ~250e/hlö.</li>
+                </ul>
               </div>
             </header>
             <SignUpForm options={options} />

@@ -29,7 +29,7 @@ export async function getTableSchema(): Promise<AirtableField[]> {
     headers: {
       Authorization: `Bearer ${AIRTABLE_API_KEY}`,
     },
-    next: { revalidate: 3600 }, // Cache for 1 hour
+    cache: "no-store", // Always fetch fresh field options
   });
 
   if (!response.ok) {

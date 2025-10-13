@@ -38,7 +38,7 @@ export default function GraniittiSauna({
                 kutkuttavia mysteereitä ja lupaa tehdä katalia petoksia? Olitpa
                 sitten kokenut, mutta epäonnekas seikkailija, jolle Faaraon
                 kirous jäi viime kerralla hampaankoloon tai innokas tulokas,
-                joka janoo Kaken legendaarista tomaatti-sellerisoppaa – meillä
+                joka janoaa Kaken legendaarista tomaatti-sellerisoppaa – meillä
                 on tarjota sinulle jotakin aivan uskomatonta.
               </p>
 
