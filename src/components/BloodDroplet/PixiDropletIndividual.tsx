@@ -466,15 +466,17 @@ export default function PixiDropletIndividual() {
           // Physics constants
           const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
           const MAX_VELOCITY = 12; // Terminal velocity
-          const IMPACT_DECEL = 0.7; // Deceleration factor when hitting surface (70% dampening = 30% loss)
+          const IMPACT_DECEL = 0.5; // Deceleration factor when hitting surface (50% dampening = 50% velocity loss)
           const TEXT_FRICTION = 0.75; // Friction inside text (75% of velocity retained = 25% loss per frame)
-          const EXIT_ACCEL = 0.2; // Acceleration when exiting (gaining speed)
+          const MIN_VELOCITY = 0.5; // Minimum velocity to prevent complete stop
+          const EXIT_ACCEL = 0.25; // Acceleration when exiting (gaining speed)
 
           const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
 
-          // Reset on new cycle (resetDroplet handles all state reset)
-          if (phase < 0.01 && state.phase === "merge") {
+          // Reset on new cycle - check if we've completed and faded out
+          if (state.phase === "merge" && state.graphic.alpha <= 0.05) {
             resetDroplet(state, index);
+            return; // Skip this frame to prevent flicker
           }
 
           // SPAWN PHASE: Emerge from top bar
@@ -524,13 +526,17 @@ export default function PixiDropletIndividual() {
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (state.phase === "impact") {
-            // Decelerate when hitting text
+            // Aggressive deceleration when hitting text/puddle
             state.velocity *= IMPACT_DECEL;
+            // Ensure minimum velocity to keep moving
+            state.velocity = Math.max(state.velocity, MIN_VELOCITY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (state.phase === "inText") {
             // Slow movement with friction
             state.velocity *= TEXT_FRICTION;
+            // Ensure minimum velocity to keep moving through text
+            state.velocity = Math.max(state.velocity, MIN_VELOCITY);
             // Gentle scale variation
             const textProgress =
               (dropletBottom - textTop) / (textBottom - textTop);
@@ -543,17 +549,18 @@ export default function PixiDropletIndividual() {
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
-            // Merge into puddle
-            state.velocity *= 0.8;
-            const mergeProgress =
-              (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
-            const mergeFade = Math.max(0, 1 - (mergeProgress - 0.88) / 0.12);
+            // Merge into puddle - STOP MOVING, just fade out
+            state.velocity = 0; // Stop all movement
+            const mergeProgress = (dropletBottom - bottomPuddleSurface) / 40;
+            const mergeFade = Math.max(0, 1 - mergeProgress);
             state.graphic.alpha = mergeFade;
-            state.graphic.scale.set(state.scale * (1 + (1 - mergeFade) * 0.5));
+            state.graphic.scale.set(state.scale * (1 + mergeProgress * 0.3));
           }
 
-          // Update position with velocity
-          state.y += state.velocity * dt * 60; // Normalize by 60fps
+          // Update position with velocity (only if not merging)
+          if (state.phase !== "merge") {
+            state.y += state.velocity * dt * 60; // Normalize by 60fps
+          }
 
           // Apply position
           state.graphic.x = state.offset;
