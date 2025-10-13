@@ -22,6 +22,7 @@ export default function SignUpForm({
   const mailiId = useId();
   const puhnroId = useId();
   const nimiId = useId();
+  const laskutusId = useId();
   const ruokavalio = useId();
   const allergiatId = useId();
   const kuljetusId = useId();
@@ -36,6 +37,7 @@ export default function SignUpForm({
     Nimi: "",
     Maili: "",
     Puhnro: "",
+    Laskutusosoite: "",
     Ruokavalio: [] as string[],
     Kuljetus: "",
     Pelikiinnostus: [] as string[],
@@ -45,7 +47,6 @@ export default function SignUpForm({
     Terveyshuomioita: "",
     Majoitukset: "",
     Majoitus: [] as string[],
-    "Osoitetiedot laskusta varten": "",
     Majoitushuomioita: "",
   });
 
@@ -127,7 +128,7 @@ export default function SignUpForm({
       Nimi: "",
       Maili: "",
       Puhnro: "",
-      "Osoitetiedot laskusta varten": "",
+      Laskutusosoite: "",
       Ruokavalio: [],
       Kuljetus: "",
       Pelikiinnostus: [],
@@ -287,6 +288,30 @@ export default function SignUpForm({
             onChange={(e) =>
               setFormData({ ...formData, Puhnro: e.target.value })
             }
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {/* Laskutusosoite */}
+        <div className={styles.field}>
+          <div className={styles.fieldTitle}>
+            <label htmlFor={laskutusId} className={styles.label}>
+              Laskutusosoite <span className={styles.required}>*</span>
+            </label>
+            <div className={styles.errorContainer}>
+              {errors.Laskutusosoite && (
+                <span className={styles.error}>{errors.Laskutusosoite}</span>
+              )}
+            </div>
+          </div>
+          <textarea
+            id={laskutusId}
+            className={styles.textarea}
+            value={formData.Laskutusosoite}
+            onChange={(e) =>
+              setFormData({ ...formData, Laskutusosoite: e.target.value })
+            }
+            placeholder="Murhaajankatu 221B, 00100, Helsinki"
             disabled={isSubmitting}
           />
         </div>

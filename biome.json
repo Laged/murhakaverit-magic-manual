@@ -17,6 +17,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "a11y": {
+        "noAutofocus": "off"
+      },
       "suspicious": {
         "noUnknownAtRules": "off"
       }

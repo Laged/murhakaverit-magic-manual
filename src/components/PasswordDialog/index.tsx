@@ -96,6 +96,7 @@ export default function PasswordDialog({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
+              autoFocus
             />
             <div className={styles.errorContainer}>
               {error && <div className={styles.error}>{error}</div>}
