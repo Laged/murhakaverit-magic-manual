@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState } from "react";
+import PasswordDialog from "@/components/PasswordDialog";
 import Card from "./Card";
 import styles from "./GraniittiSauna.module.css";
 
@@ -11,6 +14,8 @@ interface GraniittiSaunaProps {
 export default function GraniittiSauna({
   theme = "light",
 }: GraniittiSaunaProps) {
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+
   const sectionClass = `${styles.section} ${
     theme === "dark" ? styles.sectionDark : styles.sectionLight
   }`;
@@ -21,55 +26,76 @@ export default function GraniittiSauna({
         <Card theme={theme}>
           <div className="flex flex-col gap-8">
             <header className={styles.header}>
-              <h2 className={styles.heading}>Graniittisauna 05/2026</h2>
-              <p className={styles.body}>
-                Murhamysteereitä, lautapelejä ja saunomista luvassa toukokuussa
-                2026. Hyvässä porukassa, tietenkin! Syksyllä hyväksi todettu
-                graniittisaunareissu tulee uudestaan. Lisätiedot alla.
+              <h2 className={styles.heading}>Graniittimatkat 05/2026</h2>
+              <p className={styles.tagline}>
+                Graniittimatkan seikkailut kutsuvat jälleen 7.5. - 10.5.2026!
               </p>
             </header>
 
-            <div className="flex flex-col gap-4">
-              <DetailRow label="Paikka">
-                Storfinnhova Gård{" "}
+            <div className={styles.description}>
+              <p>
+                Kaipaatko silmiä siristäviä löylyjä graniittisaunassa,
+                kutkuttavia mysteereitä ja lupaa tehdä katalia petoksia? Olitpa
+                sitten kokenut, mutta epäonnekas seikkailija, jolle Faaraon
+                kirous jäi viime kerralla hampaankoloon tai innokas tulokas,
+                joka janoo Kaken legendaarista tomaatti-sellerisoppaa – meillä
+                on tarjota sinulle jotakin aivan uskomatonta.
+              </p>
+
+              <p>
+                Graniittimatkat suuntaavat jälleen tuttuihin maisemiin,
+                idylliseen{" "}
                 <a
                   href="https://www.storfinnhova.com/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.externalLink}
                 >
-                  ↗
+                  Storfinnhova Gårdiin
                 </a>
-              </DetailRow>
-              <DetailRow label="Aika">Toukokuu 2026</DetailRow>
-              <DetailRow label="Ohjelma">
-                Jubensha - BotC - Ten Candles - jne.
-              </DetailRow>
-              <DetailRow label="Osallistuminen">Vain kutsulla</DetailRow>
+                , ensi vuoden toukokuussa. Yleisön pyynnöstä aloitamme
+                murharituaalit jo torstaina ja päätämme ne sunnuntaina.
+              </p>
+
+              <p>
+                Hyppää siis mukaan tähän ainutlaatuiseen matkaan täyttämällä
+                ilmoittautumislomake alapuolelta. Nähdään Storfinnhovassa!
+              </p>
+
+              <p className={styles.highlight}>
+                <strong>Vinkki:</strong> Mikäli mielit taistella kynsin ja
+                hampain metsäkylän tunnelmallisiin puumökkeihin tai vaadit
+                elämääsi glamouria ja luksusta glamping-telttojen muodossa,
+                olethan ripeä. Parhaat paikat viedään käsistä ensimmäisille
+                ilmottautujille.
+              </p>
+
+              <p className={styles.important}>
+                <strong>Tärkeää:</strong> Tapahtuma on vain kutsutuille, eli
+                olet todennäköisesti jo Whatsapp-ryhmässämme. Kiinnitäthän
+                kuitenkin erityistä huomiota siihen, että kaikki tietosi ovat
+                oikein lomaketta täyttäessäsi. Laita viestiä järjestäjille, jos
+                jokin menee pieleen.
+              </p>
             </div>
 
             <div className={styles.buttonWrap}>
-              <button type="button" className={styles.button}>
+              <button
+                type="button"
+                className={styles.button}
+                onClick={() => setIsPasswordDialogOpen(true)}
+              >
                 Ilmoittaudu tästä!
               </button>
             </div>
           </div>
         </Card>
       </div>
+
+      <PasswordDialog
+        isOpen={isPasswordDialogOpen}
+        onClose={() => setIsPasswordDialogOpen(false)}
+      />
     </section>
-  );
-}
-
-interface DetailRowProps {
-  label: string;
-  children: ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className={styles.detailRow}>
-      <span className={styles.detailLabel}>{label}:</span>
-      <span className={styles.detailValue}>{children}</span>
-    </div>
   );
 }

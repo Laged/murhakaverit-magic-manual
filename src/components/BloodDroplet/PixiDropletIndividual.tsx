@@ -33,7 +33,7 @@ const DROPLET_BASE_SIZE = 1.0; // Scale multiplier for all droplets
 const DROPLET_MIN_SCALE = 0.5;
 const DROPLET_MAX_SCALE = 1.0;
 const DROPLET_MAX_DELAY = 1.25; // seconds
-const DROPLET_MIN_OFFSET = 25; // percentage
+const DROPLET_MIN_OFFSET = 15; // percentage
 const DROPLET_MAX_OFFSET = 75; // percentage
 
 // === TEXT STYLING ===
@@ -402,13 +402,13 @@ export default function PixiDropletIndividual() {
 
           const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
 
-          const topBarBottom = BAR_HEIGHT;
-          const textTop = height * 0.4 + 30;
-          const textBottom = height * 0.6;
-          const bottomPuddleSurface = height - BAR_HEIGHT + 60;
           const baseSize = 1.5;
           const dropletHeight = DROPLET_BASE_HEIGHT * state.scale * baseSize;
           const halfHeight = dropletHeight / 2;
+          const topBarBottom = BAR_HEIGHT;
+          const textTop = height * 0.375 + BAR_HEIGHT;
+          const textBottom = height * 0.6 + BAR_HEIGHT;
+          const bottomPuddleSurface = height - BAR_HEIGHT - halfHeight / 8;
 
           let y: number;
 
