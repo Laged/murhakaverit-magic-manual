@@ -251,6 +251,10 @@ export default function PixiDropletIndividual() {
       let titleIntroElapsed = 0;
       let titleIntroActive = true;
 
+      // DEBUG: Create blue border to visualize text bounds
+      const debugBorder = new Graphics();
+      root.addChild(debugBorder);
+
       // Detect mobile and adjust settings
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -372,6 +376,17 @@ export default function PixiDropletIndividual() {
         titleText.y = textY;
         crispTitleText.x = width / 2;
         crispTitleText.y = textY;
+
+        // DEBUG: Draw blue border around text bounds
+        const textBounds = titleText.getBounds();
+        debugBorder.clear();
+        debugBorder.rect(
+          textBounds.x,
+          textBounds.y,
+          textBounds.width,
+          textBounds.height,
+        );
+        debugBorder.stroke({ color: 0x0000ff, width: 3 }); // Blue, 3px wide
       };
 
       // Initialize all droplets
