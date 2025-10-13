@@ -1,29 +1,21 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import type { CSSProperties } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DropletShape } from "@/components/BloodDroplet";
 import styles from "@/components/BloodDroplet/BloodDroplet.module.css";
 import CrispBloodDroplet from "@/components/BloodDroplet/CrispBloodDroplet";
 import {
   BASE_OFFSETS,
-  DELAY_INCREMENT,
-  JITTER_RANGE,
+  DROPLET_DURATION,
   MAX_OFFSET,
   MIN_OFFSET,
 } from "@/components/BloodDroplet/dropletConfig";
 import type { DropletSeed } from "@/components/BloodDroplet/dropletTypes";
+import PixiDropletIndividual from "@/components/BloodDroplet/PixiDropletIndividual";
 import { useWebGLSupport } from "@/hooks/useWebGLSupport";
 
-const PixiDropletCanvas = dynamic(
-  () => import("@/components/BloodDroplet/PixiDropletCanvas"),
-  { ssr: false },
-);
-
-// Anchor droplets over "MURHA" letters with a conservative jitter band
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
+const TITLE_INTRO_DURATION_MS = 2000;
+const MIN_SPACING = 6;
 
 const randomId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -33,39 +25,56 @@ const randomId = () => {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 };
 
-const getRandomOffset = (base: number) =>
-  clamp(base + (Math.random() * 2 - 1) * JITTER_RANGE, MIN_OFFSET, MAX_OFFSET);
-
-const getRandomScale = (scaleMultiplier: number) =>
-  (Math.random() * 1.25 + 0.25) * scaleMultiplier;
-
-const TITLE_INTRO_DURATION_MS = 1200;
+const getRandomScale = (
+  scaleMultiplier: number,
+  minScale = 0.25,
+  maxScale = 1.5,
+) => {
+  const randomScale = Math.random() * (maxScale - minScale) + minScale;
+  return randomScale * scaleMultiplier;
+};
 
 const createDroplets = (
   scaleMultiplier: number,
   count: number,
-): DropletSeed[] =>
-  BASE_OFFSETS.slice(0, count).map((baseOffset, index) => ({
-    id: randomId(),
-    offset: getRandomOffset(baseOffset),
-    scale: getRandomScale(scaleMultiplier),
-    delay: index * DELAY_INCREMENT,
-    phase: Math.random(),
-  }));
+  minScale = 0.25,
+  maxScale = 1.5,
+): DropletSeed[] => {
+  const actualCount = Math.max(
+    1,
+    Math.round(count * (0.7 + Math.random() * 0.6)),
+  );
+  const offsets: number[] = [];
+  let attempts = 0;
 
-const BASE_DROPLETS: DropletSeed[] = BASE_OFFSETS.map((baseOffset, index) => ({
-  id: `base-${index}`,
-  offset: baseOffset,
-  scale: 1,
-  delay: index * DELAY_INCREMENT,
-  phase: 0,
-}));
+  while (offsets.length < actualCount && attempts < 200) {
+    attempts += 1;
+    const candidate = MIN_OFFSET + Math.random() * (MAX_OFFSET - MIN_OFFSET);
+    if (
+      offsets.every((existing) => Math.abs(existing - candidate) >= MIN_SPACING)
+    ) {
+      offsets.push(candidate);
+    }
+  }
+
+  offsets.sort((a, b) => a - b);
+
+  return offsets.map((offset) => ({
+    id: randomId(),
+    offset,
+    scale: getRandomScale(scaleMultiplier, minScale, maxScale),
+    delay: Math.random() * 1.25,
+    phase: 0,
+  }));
+};
+
+const BASE_DROPLETS: DropletSeed[] = createDroplets(1, BASE_OFFSETS.length);
 
 const getDropletCount = (width: number) => {
-  if (width <= 480) return 3; // Mobile: 3 droplets
-  if (width <= 768) return 4; // Tablet: 4 droplets
-  if (width <= 1024) return 5; // Small desktop: 5 droplets
-  return 7; // Desktop: 7 droplets
+  if (width <= 480) return 3;
+  if (width <= 768) return 4;
+  if (width <= 1024) return 5;
+  return 7;
 };
 
 const resolveScaleMultiplier = (width: number) => {
@@ -77,24 +86,24 @@ const resolveScaleMultiplier = (width: number) => {
 
 type BloodDropletSceneTheme = "dark" | "light";
 
-interface BloodDropletSceneProps {
+interface PixiDropletSceneWrapperProps {
   theme?: BloodDropletSceneTheme;
 }
 
-export default function BloodDropletScene({
+export default function PixiDropletSceneWrapper({
   theme = "dark",
-}: BloodDropletSceneProps) {
+}: PixiDropletSceneWrapperProps) {
   const { hasWebGL, isChecking } = useWebGLSupport();
   const [scaleMultiplier, setScaleMultiplier] = useState(1);
   const [dropletCount, setDropletCount] = useState(7);
   const [droplets, setDroplets] = useState<DropletSeed[]>(BASE_DROPLETS);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(true);
   const [isTitleIntroActive, setIsTitleIntroActive] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const burstTimerRef = useRef<number | null>(null);
 
-  // Update scale multiplier based on viewport width
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -134,11 +143,28 @@ export default function BloodDropletScene({
     };
   }, []);
 
-  // Regenerate droplets whenever the scale multiplier or count changes
   useEffect(() => {
-    setDroplets(createDroplets(scaleMultiplier, dropletCount));
+    const seeds = createDroplets(scaleMultiplier, dropletCount);
+    setDroplets(seeds);
     setHasHydrated(true);
   }, [scaleMultiplier, dropletCount]);
+
+  useEffect(() => {
+    if (burstTimerRef.current !== null) {
+      window.clearTimeout(burstTimerRef.current);
+    }
+
+    const burstDurationMs = Math.round(DROPLET_DURATION * 1000 + 1500);
+    burstTimerRef.current = window.setTimeout(() => {
+      setDroplets(createDroplets(scaleMultiplier, dropletCount));
+    }, burstDurationMs);
+
+    return () => {
+      if (burstTimerRef.current !== null) {
+        window.clearTimeout(burstTimerRef.current);
+      }
+    };
+  }, [dropletCount, scaleMultiplier]);
 
   useEffect(() => {
     setIsTitleIntroActive(true);
@@ -150,12 +176,6 @@ export default function BloodDropletScene({
     return () => window.clearTimeout(timer);
   }, []);
 
-  const reshuffleDroplets = useCallback(() => {
-    if (!hasHydrated) return;
-    setDroplets(createDroplets(scaleMultiplier, dropletCount));
-  }, [hasHydrated, scaleMultiplier, dropletCount]);
-
-  // Intersection Observer to pause animations when offscreen
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -173,14 +193,13 @@ export default function BloodDropletScene({
     return () => observer.disconnect();
   }, []);
 
-  // Detect prefers-reduced-motion
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     setPrefersReducedMotion(mediaQuery.matches);
 
-    const handleChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches);
     };
 
     if (typeof mediaQuery.addEventListener === "function") {
@@ -200,10 +219,9 @@ export default function BloodDropletScene({
 
   const containerBgClass = theme === "light" ? "bg-white" : "bg-black";
 
-  const renderCrispTitle = (extraClass?: string, style?: CSSProperties) => (
+  const renderCrispTitle = (extraClass?: string) => (
     <div
       className={`${styles.titleCrisp}${extraClass ? ` ${extraClass}` : ""}`}
-      style={style}
     >
       <h1>
         murha-
@@ -213,11 +231,8 @@ export default function BloodDropletScene({
     </div>
   );
 
-  const renderGooTitle = (extraClass?: string, style?: CSSProperties) => (
-    <div
-      className={`${styles.titleGoo}${extraClass ? ` ${extraClass}` : ""}`}
-      style={style}
-    >
+  const renderGooTitle = (extraClass?: string) => (
+    <div className={`${styles.titleGoo}${extraClass ? ` ${extraClass}` : ""}`}>
       <h1>
         murha-
         <br />
@@ -226,7 +241,18 @@ export default function BloodDropletScene({
     </div>
   );
 
-  // Show static version if reduced motion preferred
+  // Hooks must be called before early returns
+  const mode: "loading" | "webgl" | "css" = isChecking
+    ? "loading"
+    : hasWebGL
+      ? "webgl"
+      : "css";
+
+  const activeDroplets = useMemo(
+    () => (hasHydrated ? droplets : BASE_DROPLETS),
+    [droplets, hasHydrated],
+  );
+
   if (prefersReducedMotion) {
     return (
       <div
@@ -235,25 +261,18 @@ export default function BloodDropletScene({
       >
         <CrispBloodDroplet
           theme={theme}
-          gooChildren={renderGooTitle(undefined, { opacity: 0.5 })}
-          crispChildren={renderCrispTitle()}
+          gooChildren={renderGooTitle(styles.titleGooIntro)}
+          crispChildren={renderCrispTitle(styles.titleCrispIntro)}
         />
       </div>
     );
   }
-  const mode: "loading" | "webgl" | "css" = isChecking
-    ? "loading"
-    : hasWebGL
-      ? "webgl"
-      : "css";
-
-  const activeDroplets = hasHydrated ? droplets : BASE_DROPLETS;
 
   const isIntroClassActive = isTitleIntroActive || mode === "loading";
 
   const fallbackGooChildren = (
     <>
-      {activeDroplets.map((droplet, index) => (
+      {activeDroplets.map((droplet) => (
         <DropletShape
           key={droplet.id}
           offset={droplet.offset}
@@ -261,45 +280,32 @@ export default function BloodDropletScene({
           scale={droplet.scale}
           initialPhase={droplet.phase}
           isPaused={!isVisible}
-          onIteration={index === 0 ? reshuffleDroplets : undefined}
         />
       ))}
       {renderGooTitle(isIntroClassActive ? styles.titleGooIntro : undefined)}
     </>
   );
 
-  const loadingGooChildren = renderGooTitle(styles.titleGooIntro, {
-    opacity: 0.4,
-  });
-
+  // Only show red goo text in CSS fallback mode, not during loading
   return (
     <div
       ref={containerRef}
-      className={`relative w-screen overflow-hidden ${containerBgClass}`}
+      className={`relative w-full overflow-hidden ${containerBgClass}`}
       style={{ height: "95vh" }}
     >
-      <div className="absolute inset-0 pointer-events-none">
-        <CrispBloodDroplet
-          theme={theme}
-          gooChildren={
-            mode === "css"
-              ? fallbackGooChildren
-              : mode === "loading"
-                ? loadingGooChildren
-                : null
-          }
-          crispChildren={null}
-        />
-      </div>
+      {mode === "css" && (
+        <div className="absolute inset-0 pointer-events-none">
+          <CrispBloodDroplet
+            theme={theme}
+            gooChildren={fallbackGooChildren}
+            crispChildren={null}
+          />
+        </div>
+      )}
 
       {mode === "webgl" && (
-        <div className="absolute inset-0">
-          <PixiDropletCanvas
-            theme={theme}
-            droplets={droplets}
-            isPaused={!isVisible}
-            onLoop={reshuffleDroplets}
-          />
+        <div className="absolute inset-0 pointer-events-none">
+          <PixiDropletIndividual />
         </div>
       )}
 
@@ -308,9 +314,8 @@ export default function BloodDropletScene({
       )}
 
       {renderCrispTitle(
-        isIntroClassActive ? styles.titleCrispIntro : undefined,
-        isIntroClassActive
-          ? ({ "--title-intro-duration": "1.2s" } as CSSProperties)
+        mode !== "webgl" && isIntroClassActive
+          ? styles.titleCrispIntro
           : undefined,
       )}
     </div>

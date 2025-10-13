@@ -47,6 +47,7 @@ interface CrispBloodDropletProps {
   crispChildren?: ReactNode;
   barHeight?: number;
   theme?: BloodDropletTheme;
+  disableFilter?: boolean;
 }
 
 const FALLBACK_FILTER =
@@ -57,12 +58,18 @@ export default function CrispBloodDroplet({
   crispChildren,
   barHeight = BASE_DROPLET_HEIGHT,
   theme = "dark",
+  disableFilter = false,
 }: CrispBloodDropletProps) {
   const filterId = useId();
   const backgroundClass = theme === "light" ? "bg-white" : "bg-black";
   const themeStyles = BLOOD_THEME_VARS[theme] as CSSProperties;
   const supportsGooFilter = useSupportsGooFilter();
-  const gooFilter = supportsGooFilter ? `url(#${filterId})` : FALLBACK_FILTER;
+  const shouldUseSvgFilter = supportsGooFilter && !disableFilter;
+  const gooFilter = disableFilter
+    ? "none"
+    : supportsGooFilter
+      ? `url(#${filterId})`
+      : FALLBACK_FILTER;
 
   return (
     <div
@@ -71,7 +78,7 @@ export default function CrispBloodDroplet({
       data-blood-theme={theme}
       data-supports-goo={supportsGooFilter}
     >
-      {supportsGooFilter && (
+      {shouldUseSvgFilter && (
         <svg
           className="absolute h-0 w-0 pointer-events-none"
           aria-hidden="true"
@@ -121,7 +128,15 @@ export default function CrispBloodDroplet({
           />
         </div>
 
-        {!supportsGooFilter && (
+        {!shouldUseSvgFilter && supportsGooFilter && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            aria-hidden="true"
+            style={{ background: "rgba(136, 8, 8, 0.12)" }}
+          />
+        )}
+
+        {!supportsGooFilter && !disableFilter && (
           <div
             className="absolute inset-0 pointer-events-none"
             aria-hidden="true"

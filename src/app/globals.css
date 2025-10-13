@@ -19,8 +19,27 @@
   }
 }
 
+html {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  /* Safari-specific fixes */
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  min-height: 100%;
+  /* Safari-specific fixes */
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+/* Ensure main can scroll on Safari */
+main {
+  position: relative;
+  overflow-x: hidden;
 }

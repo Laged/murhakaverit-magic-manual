@@ -1,6 +1,6 @@
 .drop {
   position: absolute;
-  animation: drop-fall 7s infinite;
+  animation: drop-fall 3.5s infinite;
   animation-delay: var(--drop-delay, 0s);
   left: var(--drop-left, 50%);
   /* Add GPU acceleration hints */
