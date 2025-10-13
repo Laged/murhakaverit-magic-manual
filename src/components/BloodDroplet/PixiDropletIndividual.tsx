@@ -359,7 +359,19 @@ export default function PixiDropletIndividual() {
         const maxX = textRight - charWidth;
         state.offset = minX + Math.random() * (maxX - minX);
 
-        // KEY: clear() + redraw
+        // Reset physics state to prevent flicker
+        const dropletHeight =
+          DROPLET_BASE_HEIGHT * state.scale * DROPLET_BASE_SIZE * 1.5;
+        const halfHeight = dropletHeight / 2;
+        state.y = BAR_HEIGHT - halfHeight - 10;
+        state.velocity = 0;
+        state.phase = "spawn";
+
+        // Reset graphics state
+        state.graphic.alpha = 0; // Start invisible
+        state.graphic.scale.set(0.3 * state.scale); // Start small
+
+        // KEY: clear() + redraw with new scale
         drawDroplet(state.graphic, state.scale);
       };
 
@@ -454,17 +466,14 @@ export default function PixiDropletIndividual() {
           // Physics constants
           const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
           const MAX_VELOCITY = 12; // Terminal velocity
-          const IMPACT_DECEL = 0.85; // Deceleration factor when hitting surface (85% dampening)
-          const TEXT_FRICTION = 0.92; // Friction inside text (92% of velocity retained)
-          const EXIT_ACCEL = 0.15; // Acceleration when exiting (gaining speed)
+          const IMPACT_DECEL = 0.7; // Deceleration factor when hitting surface (70% dampening = 30% loss)
+          const TEXT_FRICTION = 0.75; // Friction inside text (75% of velocity retained = 25% loss per frame)
+          const EXIT_ACCEL = 0.2; // Acceleration when exiting (gaining speed)
 
           const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
 
-          // Reset on new cycle
+          // Reset on new cycle (resetDroplet handles all state reset)
           if (phase < 0.01 && state.phase === "merge") {
-            state.phase = "spawn";
-            state.y = topBarBottom - halfHeight - 10;
-            state.velocity = 0;
             resetDroplet(state, index);
           }
 
