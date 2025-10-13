@@ -16,7 +16,8 @@
   - Commits: 
     - `fix: constrain droplets to text bounds`
     - `refine: avoid droplets on rightmost characters`
-  - Ready for review
+    - `debug: add blue border to visualize text bounds`
+  - Status: Debugging - blue border added for visual verification
 
 - [ ] **Issue #2: Droplet physics not responsive to text position**
   - Problem: Slow-down/acceleration hardcoded, not responsive

@@ -251,9 +251,9 @@ export default function PixiDropletIndividual() {
       let titleIntroElapsed = 0;
       let titleIntroActive = true;
 
-      // DEBUG: Create blue border to visualize text bounds
+      // DEBUG: Create blue border to visualize text bounds (in crisp container to avoid filters)
       const debugBorder = new Graphics();
-      root.addChild(debugBorder);
+      crispContainer.addChild(debugBorder);
 
       // Detect mobile and adjust settings
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
