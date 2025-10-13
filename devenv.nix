@@ -3,6 +3,7 @@
 {
   # https://devenv.sh/basics/
   env.GREET = "devenv";
+  env.PRE_COMMIT_HOME = ".git/pre-commit-cache";
 
   # https://devenv.sh/packages/
   packages = [ pkgs.git pkgs.biome pkgs.nil ];
@@ -26,11 +27,16 @@
   '';
 
   scripts.fix.exec = ''
-    biome check --write
+    biome check src --write
+    bun run type-check
   '';
 
   scripts.dev.exec = ''
     bun run dev
+  '';
+
+  scripts.tunnel.exec = ''
+    NIXPKGS_ALLOW_UNFREE=1 nix run --impure nixpkgs#ngrok -- http 3000
   '';
 
   scripts.build.exec = ''
@@ -43,7 +49,7 @@
 
   enterShell = ''
     hello
-    biome lint
+    biome lint src
   '';
 
   # https://devenv.sh/tasks/

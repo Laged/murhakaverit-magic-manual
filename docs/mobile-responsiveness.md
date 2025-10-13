@@ -1,36 +1,25 @@
 # Mobile Responsiveness Notes
 
-The refactored homepage keeps responsiveness simple by leaning on the `BloodDroplet` primitives rather than large CSS variable matrices. Key behaviours to remember:
+The homepage relies on a handful of responsive constants rather than breakpoint-heavy styles. Update these values if the scene needs to shift for new devices.
 
 ## 1. Typography & Layout
-- The headline (`styles.titleGoo` / `styles.titleCrisp`) uses `clamp(3rem, 16vw, 13rem)` so the word stays centred and legible from 320 px upwards without custom breakpoints.
-- `letter-spacing` is now `clamp(0em, 0.8vw, 0.35em)`, tightening automatically on phones and relaxing on wide monitors.
-- Both title layers share identical markup and transform (`translate(-50%, -50%)`), guaranteeing alignment regardless of viewport.
-- The backdrop container relies on Tailwind utility classes (`h-screen w-screen`). Safe-area padding can be added at the page level if future designs require it.
+- Both title layers share the same transform so they stay aligned on all screens (`src/components/BloodDroplet/BloodDroplet.module.css:9-58`). Font size clamps to `clamp(3rem, 30vw, 15rem)` and letter spacing tightens to `clamp(0em, 0.5vw, 0.35em)` for the goo layer and `clamp(0em, 0.8vw, 0.35em)` for the crisp layer.
+- `BloodDropletScene` pins the hero to `95vh` with `w-screen` (`src/components/BloodDropletScene.tsx:229-231`). Adjust this height if the viewport should expose content beneath the fold on mobile.
+- The red bars in `CrispBloodDroplet` extend 20px past each edge, ensuring the blur remains filled even on tall notched devices (`src/components/BloodDroplet/CrispBloodDroplet.tsx:114-121`).
 
 ## 2. Droplet Distribution
-- `BASE_OFFSETS` contains percentage anchors. Because positions are percentage-based, droplets stay inside the viewport across aspect ratios.
-- `JITTER_RANGE` jitters those anchors by up to ±12 percentage points, then clamps the result between 5 % and 95 % so even in landscape the drops do not clip against the edges.
-- `resolveScaleMultiplier` shrinks the entire scale range to ~60 % below 480 px, ~75 % below 768 px, ~90 % below 1024 px, and 100 % on wide screens. Final droplet sizes still vary randomly within that band.
-
-To customise for specific breakpoints, derive the metadata before rendering:
-
-```ts
-const droplets = BASE_OFFSETS.map((base, index) => ({
-  offset: getRandomOffset(base),
-  scale: getRandomScale(resolveScaleMultiplier(window.innerWidth)),
-  delay: index * 0.5,
-}));
-```
+- Horizontal anchors sit at 35–65% with ±5% jitter and are clamped to 30–70% (`src/components/BloodDropletScene.tsx:15-41`). That range keeps droplets centred over “murha-” while accommodating narrow screens.
+- Breakpoint logic caps the droplet count at 3 / 4 / 5 / 7 for ≤480 px, ≤768 px, ≤1024 px, and larger viewports (`src/components/BloodDropletScene.tsx:66-71`). The responsive scale multiplier mirrors those thresholds at 0.6 / 0.75 / 0.9 / 1 (`src/components/BloodDropletScene.tsx:73-78`).
+- Droplet metadata regenerates on hydration and whenever width watchers fire (`src/components/BloodDropletScene.tsx:98-147`). `DELAY_INCREMENT` is 0.25 s, so new droplets slot naturally into the stagger (`src/components/BloodDropletScene.tsx:20,48-55`).
 
 ## 3. Animation Timing
-- The hover section (30 % → 54 %) remains linear, so the perceived pause scales with the droplet height. Smaller droplets hover briefly, larger ones linger a little longer.
-- Both freefall sections reuse the same cubic-bezier values, so the pace feels consistent regardless of screen height.
-- The first droplet's `animationiteration` callback reshuffles offsets/scales every loop, keeping motion fresh even on long viewing sessions.
+- CSS droplets animate for nine seconds total, scaling in over the top bar, pushing to 30vh, hovering near 55vh, then exiting at 110vh (`src/components/BloodDroplet/DropletShape.module.css:11-34`).
+- Pixi droplets follow the same timeline in code, re-randomising their x-position and scale only when a loop completes (`src/components/BloodDroplet/PixiDropletRenderer.ts:440-478`).
+- IntersectionObserver pauses both renderers when the hero is below the fold, which prevents background tabs from wasting battery (`src/components/BloodDropletScene.tsx:149-165`).
 
-## 4. Accessibility & Performance
-- Droplet SVGs remain `aria-hidden` because they are decorative.
-- The goo filter is applied to a dedicated wrapper; avoid placing interactive elements inside it to prevent pointer-event issues on mobile.
-- Randomisation happens on the server thanks to `export const dynamic = "force-dynamic";`. Static export would need an alternative (e.g. seeding in a client effect).
+## 4. Accessibility & Fallbacks
+- Users with reduced motion receive a static render with the red title at 50% opacity (`src/components/BloodDropletScene.tsx:195-222`).
+- iOS Safari skips the SVG goo filter in favour of a CSS drop-shadow stack (`src/components/BloodDroplet/CrispBloodDroplet.tsx:10-22,52-65`), so layout stays identical even when GPU filters are unavailable.
+- WebGL detection runs once per mount before Pixi is imported, avoiding unnecessary bundle weight on devices that will fall back to CSS (`src/hooks/useWebGLSupport.ts:5-28`).
 
-With these guardrails the scene behaves predictably on phones and tablets while still allowing art direction tweaks through a handful of constants.
+Keep these constants in sync with the animation code; changing base offsets or keyframe percentages in one layer without updating the other leads to visible desyncs on phones, where the tighter viewport makes discrepancies obvious.

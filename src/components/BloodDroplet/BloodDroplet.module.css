@@ -1,58 +1,61 @@
 @import url("https://fonts.googleapis.com/css2?family=Creepster&display=swap");
 
 :root {
-    --blood-red: #880808;
-    --title-font-size: clamp(3rem, 30vw, 15rem);
+  --blood-red: #880808;
+  --title-font-size: clamp(3rem, 30vw, 20rem);
 }
 
 /* Red background title (blends with droplets) */
 .titleGoo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
 }
 
+/* 1) TODO FIX THIS between CSS and PixiJS */
 .titleGoo h1 {
-    font-family: "Creepster", cursive;
-    font-size: var(--title-font-size);
-    text-transform: uppercase;
-    color: var(--title-goo-color, var(--blood-red));
-    margin: 0;
-    padding: 0;
-    line-height: 0.8;
-    white-space: nowrap;
-    font-weight: 900;
-    letter-spacing: clamp(0em, 0.5vw, 0.35em);
-    -webkit-text-stroke: 1px var(--title-goo-stroke, var(--blood-red));
-    paint-order: stroke fill;
-    text-shadow:
-        0 3px 0 var(--title-goo-shadow1, var(--blood-red)),
-        0 6px 2px var(--title-goo-shadow2, rgba(136, 8, 8, 0.8));
+  font-family: "Creepster", cursive;
+  font-size: var(--title-font-size);
+  text-transform: uppercase;
+  color: var(--title-goo-color, var(--blood-red));
+  margin: 0;
+  padding: 0;
+  padding-top: 62px;
+  line-height: 0.8;
+  white-space: nowrap;
+  font-weight: 900;
+  letter-spacing: clamp(0em, 0.5vw, 0.35em);
+  -webkit-text-stroke: 1px var(--title-goo-stroke, var(--blood-red));
+  paint-order: stroke fill;
+  text-shadow:
+    0 3px 0 var(--title-goo-shadow1, var(--blood-red)),
+    0 6px 2px var(--title-goo-shadow2, rgba(136, 8, 8, 0.8));
 }
 
 /* Crisp white title (sharp overlay) */
 .titleCrisp {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 20;
-    pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
 }
 
 .titleCrisp h1 {
-    font-family: "Creepster", cursive;
-    font-size: var(--title-font-size);
-    text-transform: uppercase;
-    color: var(--title-crisp-color, #fff);
-    margin: 0;
-    padding: 0;
-    line-height: 0.8;
-    white-space: nowrap;
-    letter-spacing: clamp(0em, 0.8vw, 0.35em);
-    text-shadow:
-        0 0 0.2rem var(--title-crisp-shadow1, rgba(255, 255, 255, 0.35)),
-        0 0 0.65rem var(--title-crisp-shadow2, rgba(255, 255, 255, 0.15));
+  font-family: "Creepster", cursive;
+  font-size: var(--title-font-size);
+  text-transform: uppercase;
+  color: var(--title-crisp-color, #fff);
+  margin: 0;
+  padding: 0;
+  padding-top: 62px;
+  line-height: 0.8;
+  white-space: nowrap;
+  letter-spacing: clamp(0em, 0.5vw, 0.5em);
+  text-shadow:
+    0 0 0.2rem var(--title-crisp-shadow1, rgba(255, 255, 255, 0.35)),
+    0 0 0.65rem var(--title-crisp-shadow2, rgba(255, 255, 255, 0.15));
 }

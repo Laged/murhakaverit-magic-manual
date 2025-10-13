@@ -12,11 +12,9 @@ const useSupportsGooFilter = () => {
   const [supportsFilter, setSupportsFilter] = useState(true);
 
   useEffect(() => {
-    // Detect iOS Safari which has buggy feGaussianBlur implementation
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-    // iOS Safari has buggy feGaussianBlur implementation
     setSupportsFilter(!(isIOS && isSafari));
   }, []);
 
@@ -44,24 +42,34 @@ const BLOOD_THEME_VARS: Record<BloodDropletTheme, Record<string, string>> = {
   },
 };
 
-interface BloodDropletProps {
+interface CrispBloodDropletProps {
   gooChildren: ReactNode;
   crispChildren?: ReactNode;
   barHeight?: number;
   theme?: BloodDropletTheme;
+  disableFilter?: boolean;
 }
 
-export default function BloodDroplet({
+const FALLBACK_FILTER =
+  "saturate(260%) brightness(0.92) drop-shadow(0 2px 6px rgba(68, 0, 0, 0.55)) drop-shadow(0 0 14px rgba(136, 8, 8, 0.5))";
+
+export default function CrispBloodDroplet({
   gooChildren,
   crispChildren,
   barHeight = BASE_DROPLET_HEIGHT,
   theme = "dark",
-}: BloodDropletProps) {
+  disableFilter = false,
+}: CrispBloodDropletProps) {
+  const filterId = useId();
   const backgroundClass = theme === "light" ? "bg-white" : "bg-black";
   const themeStyles = BLOOD_THEME_VARS[theme] as CSSProperties;
   const supportsGooFilter = useSupportsGooFilter();
-  const gooFilterId = useId();
-  const gooFilterUrl = `url(#${gooFilterId})`;
+  const shouldUseSvgFilter = supportsGooFilter && !disableFilter;
+  const gooFilter = disableFilter
+    ? "none"
+    : supportsGooFilter
+      ? `url(#${filterId})`
+      : FALLBACK_FILTER;
 
   return (
     <div
@@ -70,15 +78,14 @@ export default function BloodDroplet({
       data-blood-theme={theme}
       data-supports-goo={supportsGooFilter}
     >
-      {/* SVG filter definition - only if supported */}
-      {supportsGooFilter && (
+      {shouldUseSvgFilter && (
         <svg
           className="absolute h-0 w-0 pointer-events-none"
           aria-hidden="true"
         >
           <defs>
             <filter
-              id={gooFilterId}
+              id={filterId}
               x="-50%"
               y="-50%"
               width="200%"
@@ -102,25 +109,45 @@ export default function BloodDroplet({
         </svg>
       )}
 
-      {/* Goo layer - apply filter conditionally */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          filter: supportsGooFilter ? gooFilterUrl : "blur(8px) contrast(20)",
-          WebkitFilter: supportsGooFilter
-            ? gooFilterUrl
-            : "blur(8px) contrast(20)",
-        }}
-      >
+      <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute top-0 bg-[#880808]"
-          style={{ height: `${barHeight}px`, left: "-20px", right: "-20px" }}
-        />
-        {gooChildren}
-        <div
-          className="absolute bottom-0 bg-[#880808]"
-          style={{ height: `${barHeight}px`, left: "-20px", right: "-20px" }}
-        />
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            filter: gooFilter,
+            WebkitFilter: gooFilter,
+          }}
+        >
+          <div
+            className="absolute top-0 bg-[#880808]"
+            style={{ height: `${barHeight}px`, left: "-20px", right: "-20px" }}
+          />
+          {gooChildren}
+          <div
+            className="absolute bottom-0 bg-[#880808]"
+            style={{ height: `${barHeight}px`, left: "-20px", right: "-20px" }}
+          />
+        </div>
+
+        {!shouldUseSvgFilter && supportsGooFilter && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            aria-hidden="true"
+            style={{ background: "rgba(136, 8, 8, 0.12)" }}
+          />
+        )}
+
+        {!supportsGooFilter && !disableFilter && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            aria-hidden="true"
+            style={{
+              background:
+                "radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%), radial-gradient(80% 80% at 50% 100%, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0) 65%)",
+              mixBlendMode: "multiply",
+              opacity: 0.9,
+            }}
+          />
+        )}
       </div>
       {crispChildren}
     </div>

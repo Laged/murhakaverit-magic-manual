@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Murhakaverit Magic Manual
+
+A high-performance Next.js website featuring WebGL-accelerated blood droplet animations with graceful fallbacks for devices that cannot run the canvas version.
+
+## Features
+
+- 🎨 **WebGL Blood Droplet Animations** – PixiJS renderer with gooey blending and dynamic quality downgrades
+- 📱 **Mobile-Optimized** – Responsive droplet counts, scale multipliers, and viewport-aware pausing
+- ♿ **Accessible** – Reduced-motion static render and Safari-safe goo filter fallbacks
+- 🎭 **Dark/Light Themes** – Scene-wide theme tokens for quick palette swaps
+- 🔧 **Developer Hooks** – Optional FPS overlay and programmatic renderer controls
+
+## Tech Stack
+
+- **Next.js 15.5.4** – React framework with Turbopack
+- **PixiJS 8.7.2** – WebGL 2D rendering library
+- **React 19** – UI framework
+- **TypeScript** – Type safety
+- **Tailwind CSS 4** – Styling
+- **Biome** – Linting and formatting
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+ or Bun
+- NixOS users: See `devenv.nix` for development environment setup
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+```
+
+### Development
+
+```bash
+bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `bun run dev` – Start development server with Turbopack
+- `bun run build` – Build for production
+- `bun run start` – Start production server
+- `bun run lint` – Check code with Biome
+- `bun run lint:fix` – Auto-fix lint issues
+- `bun run format` – Format code with Biome
+- `bun run type-check` – Run TypeScript compiler check
+- `bun run analyze` – Analyze bundle size
+- `bun run perf` – Build and start for performance testing
 
-## Learn More
+## Performance & Rendering
 
-To learn more about Next.js, take a look at the following resources:
+The hero relies on progressive enhancement: PixiJS drives the primary effect, CSS animations handle no-WebGL devices, and a static render covers reduced-motion users. See `docs/hero-scene.md` for a full breakdown of the filters, randomisation logic, and rendering order.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Debug Mode
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`src/components/BloodDroplet/DebugOverlay.tsx` can be mounted during development to display live and average FPS readings.
 
-## Deploy on Vercel
+## Browser Support
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- ✅ Chrome 56+
+- ✅ Firefox 51+
+- ✅ Safari 11+
+- ✅ Edge 79+
+- ✅ iOS Safari 11+
+- ✅ Chrome for Android
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx              # Main entry point
+│   └── globals.css           # Global styles
+├── components/
+│   ├── BloodDroplet/
+│   │   ├── PixiDropletCanvas.tsx       # WebGL renderer wrapper
+│   │   ├── PixiDropletRenderer.ts      # Core rendering logic
+│   │   ├── DebugOverlay.tsx            # Optional FPS monitor
+│   │   ├── CrispBloodDroplet.tsx       # Goo filter wrapper + theme tokens
+│   │   └── DropletShape.tsx            # CSS fallback droplet
+│   └── GraniittiSauna/
+│       └── index.tsx         # Sauna card component
+└── hooks/
+    └── useWebGLSupport.ts    # WebGL detection
+```
+
+## Documentation
+
+- `docs/hero-scene.md` – Architecture, rendering modes, and Pixi/CSS alignment
+- `docs/mobile-responsiveness.md` – Breakpoints, droplet distribution, and fallback behaviour on mobile
+
+## License
+
+Private project.

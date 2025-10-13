@@ -6,13 +6,18 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "biome check",
-    "format": "biome format --write"
+    "lint": "biome check src",
+    "format": "biome format --write",
+    "lint:fix": "biome check src --write && bun run type-check",
+    "type-check": "tsc --noEmit",
+    "analyze": "ANALYZE=true next build --turbopack",
+    "perf": "next build --turbopack && next start"
   },
   "dependencies": {
+    "next": "15.5.4",
+    "pixi.js": "8.7.2",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.4"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "typescript": "^5",
