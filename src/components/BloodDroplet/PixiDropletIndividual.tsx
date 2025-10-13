@@ -49,7 +49,7 @@ interface DropletState {
   // Physics state
   y: number; // Current Y position
   velocity: number; // Current velocity (pixels per frame)
-  phase: "spawn" | "freefall" | "impact" | "inText" | "exit" | "merge";
+  phase: "spawn" | "freefall" | "inText" | "merge";
 }
 
 export default function PixiDropletIndividual() {
@@ -466,10 +466,8 @@ export default function PixiDropletIndividual() {
           // Physics constants
           const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
           const MAX_VELOCITY = 12; // Terminal velocity
-          const IMPACT_DECEL = 0.5; // Deceleration factor when hitting surface (50% dampening = 50% velocity loss)
           const TEXT_FRICTION = 0.75; // Friction inside text (75% of velocity retained = 25% loss per frame)
           const MIN_VELOCITY = 0.5; // Minimum velocity to prevent complete stop
-          const EXIT_ACCEL = 0.25; // Acceleration when exiting (gaining speed)
 
           const phase = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION;
 
@@ -492,31 +490,28 @@ export default function PixiDropletIndividual() {
             }
           }
 
-          // COLLISION DETECTION
-          const isBottomTouchingText =
-            dropletBottom >= textTop && dropletBottom <= textTop + 5;
-          const isInsideText =
-            dropletBottom > textTop + 5 && dropletTop < textBottom - 5;
-          const isTopExitingText =
-            dropletTop >= textBottom - 5 && dropletTop <= textBottom + 5;
-          const isBottomTouchingPuddle =
-            dropletBottom >= bottomPuddleSurface - 5;
+          // SIMPLIFIED COLLISION DETECTION - just check where droplet is
+          const dropletInsideText =
+            dropletBottom >= textTop && dropletTop <= textBottom;
+          const dropletAtBottomPuddle = dropletBottom >= bottomPuddleSurface;
 
-          // STATE TRANSITIONS based on collision
-          if (state.phase === "freefall" && isBottomTouchingText) {
-            state.phase = "impact";
-          } else if (state.phase === "impact" && isInsideText) {
-            state.phase = "inText";
-          } else if (state.phase === "inText" && isTopExitingText) {
-            state.phase = "exit";
-          } else if (
-            state.phase === "exit" &&
-            !isInsideText &&
-            dropletTop > textBottom
-          ) {
-            state.phase = "freefall";
-          } else if (state.phase === "freefall" && isBottomTouchingPuddle) {
-            state.phase = "merge";
+          // STATE TRANSITIONS - much simpler!
+          if (state.phase === "spawn") {
+            // Handled in spawn section above
+          } else if (state.phase === "freefall") {
+            // Check what we're about to hit
+            if (dropletAtBottomPuddle) {
+              state.phase = "merge";
+            } else if (dropletInsideText) {
+              state.phase = "inText"; // Directly to inText, skip impact micro-phase
+            }
+          } else if (state.phase === "inText") {
+            // Check if we've exited the text
+            if (!dropletInsideText && dropletTop > textBottom) {
+              state.phase = "freefall";
+            }
+          } else if (state.phase === "merge") {
+            // Stay in merge until reset
           }
 
           // APPLY PHYSICS based on current phase
@@ -525,15 +520,8 @@ export default function PixiDropletIndividual() {
             state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
-          } else if (state.phase === "impact") {
-            // Aggressive deceleration when hitting text/puddle
-            state.velocity *= IMPACT_DECEL;
-            // Ensure minimum velocity to keep moving
-            state.velocity = Math.max(state.velocity, MIN_VELOCITY);
-            state.graphic.scale.set(state.scale);
-            state.graphic.alpha = 1;
           } else if (state.phase === "inText") {
-            // Slow movement with friction
+            // Strong friction in text - slows down dramatically
             state.velocity *= TEXT_FRICTION;
             // Ensure minimum velocity to keep moving through text
             state.velocity = Math.max(state.velocity, MIN_VELOCITY);
@@ -542,11 +530,6 @@ export default function PixiDropletIndividual() {
               (dropletBottom - textTop) / (textBottom - textTop);
             const scaleVariation = 1 + Math.sin(textProgress * Math.PI) * 0.1;
             state.graphic.scale.set(state.scale * scaleVariation);
-            state.graphic.alpha = 1;
-          } else if (state.phase === "exit") {
-            // Gradually accelerate when exiting
-            state.velocity += EXIT_ACCEL;
-            state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
             // Merge into puddle - STOP MOVING, just fade out
