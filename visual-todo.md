@@ -17,12 +17,18 @@
     - `fix: constrain droplets to text bounds`
     - `refine: avoid droplets on rightmost characters`
     - `debug: add blue border to visualize text bounds`
-  - Status: Debugging - blue border added for visual verification
+    - `debug: move border to crisp container to avoid filters`
+    - `refactor: remove mobile-specific offset hacks`
+  - Status: ✅ Complete - works universally on all devices using text bounds
 
-- [ ] **Issue #2: Droplet physics not responsive to text position**
+- [x] **Issue #2: Droplet physics not responsive to text position**
   - Problem: Slow-down/acceleration hardcoded, not responsive
   - Solution: Get red text top/bottom Y coordinates from PixiJS, use for physics calculation
-  - Status: Not started
+  - Status: ✅ Complete
+  - Changes:
+    - Use `titleText.getBounds()` to get actual text Y coordinates
+    - Replace hardcoded percentages (0.375, 0.6) with textBounds.y and height
+    - Droplet slowdown/acceleration now responds to actual text position
   - Commit: `fix: make droplet physics responsive to text position`
 
 - [ ] **Issue #3: Gray background appears after PixiJS load**

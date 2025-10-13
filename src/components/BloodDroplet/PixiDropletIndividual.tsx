@@ -432,8 +432,12 @@ export default function PixiDropletIndividual() {
           const dropletHeight = DROPLET_BASE_HEIGHT * state.scale * baseSize;
           const halfHeight = dropletHeight / 2;
           const topBarBottom = BAR_HEIGHT;
-          const textTop = height * 0.375 + BAR_HEIGHT;
-          const textBottom = height * 0.6 + BAR_HEIGHT;
+
+          // Get actual text Y coordinates from PixiJS
+          const textBounds = titleText.getBounds();
+          const textTop = textBounds.y;
+          const textBottom = textBounds.y + textBounds.height;
+
           const bottomPuddleSurface = height - BAR_HEIGHT - halfHeight / 8;
 
           let y: number;
