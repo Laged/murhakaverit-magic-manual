@@ -14,7 +14,7 @@ export const SignUpFormSchema = z.object({
   "Tulen paikalle": z.string().min(1, "Valinta vaaditaan"),
   Allergiat: z.string().optional(),
   Terveyshuomioita: z.string().optional(),
-  Majoitukset: z.string().optional(), // Single line text field
+  Majoitushuomioita: z.string().optional(), // Single line text field
   Majoitus: z.array(z.string()).min(1, "Majoitus vaaditaan"), // Linked record IDs
   Laskutustiedot: z.string().optional(),
 });

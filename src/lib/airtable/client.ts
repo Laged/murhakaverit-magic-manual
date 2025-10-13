@@ -132,7 +132,7 @@ export async function submitRegistration(
         "Tulen paikalle": data["Tulen paikalle"],
         Allergiat: data.Allergiat || "",
         Terveyshuomioita: data.Terveyshuomioita || "",
-        Majoitukset: data.Majoitukset || "",
+        Majoitushuomioita: data.Majoitushuomioita || "",
         Majoitus: data.Majoitus, // Array of record IDs for linked records
         Laskutustiedot: data.Laskutustiedot || "",
       },
