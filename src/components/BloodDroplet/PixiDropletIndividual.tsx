@@ -47,16 +47,23 @@ const MIN_VELOCITY = 1; // Minimum velocity - ensures droplets always fall
 const DEBUG_SHOW_BOUNDING_BOXES = true; // Show droplet bounding boxes for debugging
 
 // === FLUID PHYSICS - FRICTION CURVES (TUNE THESE!) ===
-// Entry zone (0.0 - 0.2): High impact friction when entering fluid
-const ENTRY_FRICTION = 0.8; // Strong impact deceleration (50% velocity retained)
-const ENTRY_ZONE_END = 0.1; // First 20% of fluid
+// Entry zone (0.0 - 0.1): High impact friction when entering fluid
+const ENTRY_FRICTION = 0.5; // Strong impact deceleration (50% velocity retained)
+const ENTRY_ZONE_END = 0.1; // First 10% of fluid
 
-// Middle zone (0.2 - 0.7): Linear steady movement through fluid
-const MIDDLE_FRICTION = 1.02; // Moderate friction (88% velocity retained)
+// Middle zone (0.1 - 0.9): Linear steady movement through fluid
+const MIDDLE_FRICTION = 1.02; // Moderate friction (102% = slight acceleration)
 
-// Exit zone (0.7 - 1.0): Hanging/dripping effect when leaving fluid
-const EXIT_FRICTION = 0.9; // Strong hanging friction (60% velocity retained)
-const EXIT_ZONE_START = 0.9; // Last 30% of fluid
+// Exit zone (0.9 - 1.0): Hanging/dripping effect when leaving fluid
+const EXIT_FRICTION = 0.5; // Strong hanging friction (50% velocity retained)
+const EXIT_ZONE_START = 0.9; // Last 10% of fluid
+
+// === BOTTOM BAR PUDDLE FRICTION (DRAMATIC SPLASH!) ===
+const BOTTOM_ENTRY_FRICTION = 0.3; // VERY strong impact (30% velocity retained - dramatic splash!)
+const BOTTOM_ENTRY_ZONE_END = 0.15; // First 15% of puddle (longer impact zone)
+const BOTTOM_MIDDLE_FRICTION = 0.85; // Slow sinking through puddle
+const BOTTOM_EXIT_FRICTION = 0.7; // Deep in puddle, slowing down further
+const BOTTOM_EXIT_ZONE_START = 0.6; // Last 40% of puddle
 
 // === MOBILE DEVICE SCALING (TUNE THESE!) ===
 const MOBILE_DROPLET_SCALE = 0.5; // Scale down droplet min size on mobile
@@ -626,20 +633,41 @@ export default function PixiDropletIndividual() {
 
             // Apply friction curve based on zone
             let frictionFactor: number;
-            if (fluidProgress < ENTRY_ZONE_END) {
-              // Entry zone: High impact friction (0.0 - 0.2)
-              frictionFactor = ENTRY_FRICTION;
-            } else if (fluidProgress < EXIT_ZONE_START) {
-              // Middle zone: Linear steady movement (0.2 - 0.7)
-              frictionFactor = MIDDLE_FRICTION;
+
+            // Bottom bar (puddle) has special dramatic splash friction
+            if (state.phase === "inBottomBar") {
+              if (fluidProgress < BOTTOM_ENTRY_ZONE_END) {
+                // DRAMATIC SPLASH - Very strong impact friction
+                frictionFactor = BOTTOM_ENTRY_FRICTION;
+              } else if (fluidProgress < BOTTOM_EXIT_ZONE_START) {
+                // Slow sinking through puddle
+                frictionFactor = BOTTOM_MIDDLE_FRICTION;
+              } else {
+                // Deep in puddle, getting even slower
+                const exitProgress =
+                  (fluidProgress - BOTTOM_EXIT_ZONE_START) /
+                  (1.0 - BOTTOM_EXIT_ZONE_START);
+                frictionFactor =
+                  BOTTOM_MIDDLE_FRICTION +
+                  (BOTTOM_EXIT_FRICTION - BOTTOM_MIDDLE_FRICTION) *
+                    exitProgress;
+              }
             } else {
-              // Exit zone: Hanging/dripping effect (0.7 - 1.0)
-              // Gradually increase friction as we approach exit
-              const exitProgress =
-                (fluidProgress - EXIT_ZONE_START) / (1.0 - EXIT_ZONE_START);
-              frictionFactor =
-                MIDDLE_FRICTION +
-                (EXIT_FRICTION - MIDDLE_FRICTION) * exitProgress;
+              // Top bar and text use standard friction curves
+              if (fluidProgress < ENTRY_ZONE_END) {
+                // Entry zone: High impact friction
+                frictionFactor = ENTRY_FRICTION;
+              } else if (fluidProgress < EXIT_ZONE_START) {
+                // Middle zone: Linear steady movement
+                frictionFactor = MIDDLE_FRICTION;
+              } else {
+                // Exit zone: Hanging/dripping effect
+                const exitProgress =
+                  (fluidProgress - EXIT_ZONE_START) / (1.0 - EXIT_ZONE_START);
+                frictionFactor =
+                  MIDDLE_FRICTION +
+                  (EXIT_FRICTION - MIDDLE_FRICTION) * exitProgress;
+              }
             }
 
             const fluidVelocityScale = isMobile
