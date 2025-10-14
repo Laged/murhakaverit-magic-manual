@@ -65,14 +65,19 @@ const BOTTOM_MIDDLE_FRICTION = 0.85; // Slow sinking through puddle
 const BOTTOM_EXIT_FRICTION = 0.7; // Deep in puddle, slowing down further
 const BOTTOM_EXIT_ZONE_START = 0.6; // Last 40% of puddle
 
+// === DROPLET SQUASH & STRETCH (TUNE THESE!) ===
+const FREEFALL_STRETCH_SCALE = 1.3; // Y-scale during freefall (1.3 = 30% taller)
+const EXIT_STRETCH_SCALE = 1.2; // Y-scale during exit from fluid (1.2 = 20% taller)
+const ENTRY_SQUASH_SCALE = 0.7; // Y-scale on entry/impact (0.7 = 30% shorter/compressed)
+
 // === MOBILE DEVICE SCALING (TUNE THESE!) ===
 const MOBILE_DROPLET_SCALE = 0.5; // Scale down droplet min size on mobile
 const MOBILE_DROPLET_WIDTH_SCALE = 0.7; // Width scaling for mobile droplets
-const MOBILE_DROPLET_HEIGHT_SCALE = 0.5; // Height scaling for mobile droplets
-const MOBILE_PHYSICS_SCALE = 0.7; // Overall physics size calculation scale
-const MOBILE_GRAVITY_SCALE = 0.85; // Reduce gravity on mobile
+const MOBILE_DROPLET_HEIGHT_SCALE = 1.0; // Height scaling for mobile droplets
+const MOBILE_PHYSICS_SCALE = 0.5; // Overall physics size calculation scale
+const MOBILE_GRAVITY_SCALE = 0.5; // Reduce gravity on mobile
 const MOBILE_SPAWN_VELOCITY_SCALE = 0.1; // Slower spawn velocity on mobile
-const MOBILE_FLUID_VELOCITY_SCALE = 0.5; // Slower movement through fluids on mobile
+const MOBILE_FLUID_VELOCITY_SCALE = 0.3; // Slower movement through fluids on mobile
 const MOBILE_MERGE_VELOCITY_SCALE = 0.1; // Slower merge on mobile
 
 interface DropletState {
@@ -458,15 +463,17 @@ export default function PixiDropletIndividual() {
         crispTitleText.y = textY;
 
         // DEBUG: Draw blue border around text bounds
-        const textBounds = titleText.getBounds();
-        debugBorder.clear();
-        debugBorder.rect(
-          textBounds.x,
-          textBounds.y,
-          textBounds.width,
-          textBounds.height,
-        );
-        debugBorder.stroke({ color: 0x0000ff, width: 3 }); // Blue, 3px wide
+        if (DEBUG_SHOW_BOUNDING_BOXES) {
+          const textBounds = titleText.getBounds();
+          debugBorder.clear();
+          debugBorder.rect(
+            textBounds.x,
+            textBounds.y,
+            textBounds.width,
+            textBounds.height,
+          );
+          debugBorder.stroke({ color: 0x0000ff, width: 3 }); // Blue, 3px wide
+        }
       };
 
       // Layout first, THEN initialize droplets (so text bounds are correct)
@@ -550,7 +557,14 @@ export default function PixiDropletIndividual() {
             const spawnThreshold = 0.9;
             state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
             state.velocity = spawnProgress * 2 * velocityScale;
-            state.graphic.scale.set(Math.max(0.5, spawnProgress) * state.scale);
+            // Spawn starts squashed, gradually returns to normal
+            const spawnScale = Math.max(0.5, spawnProgress);
+            const spawnYScale =
+              ENTRY_SQUASH_SCALE + (1.0 - ENTRY_SQUASH_SCALE) * spawnProgress;
+            state.graphic.scale.set(
+              spawnScale * state.scale,
+              spawnScale * state.scale * spawnYScale,
+            );
             state.graphic.alpha = 1;
 
             if (spawnProgress >= spawnThreshold) {
@@ -605,7 +619,11 @@ export default function PixiDropletIndividual() {
               state.velocity + GRAVITY * gravityScale,
               MAX_VELOCITY,
             );
-            state.graphic.scale.set(state.scale);
+            // Stretch droplet during freefall (elongate Y)
+            state.graphic.scale.set(
+              state.scale,
+              state.scale * FREEFALL_STRETCH_SCALE,
+            );
             state.graphic.alpha = 1;
           } else if (
             state.phase === "inTopBar" ||
@@ -679,14 +697,35 @@ export default function PixiDropletIndividual() {
               MAX_VELOCITY,
             );
 
-            // Visual effects for text only
-            if (state.phase === "inText") {
-              const scaleVariation =
-                1 + Math.sin(fluidProgress * Math.PI) * 0.1;
-              state.graphic.scale.set(state.scale * scaleVariation);
+            // SQUASH & STRETCH based on fluid zone
+            let yScale = 1.0;
+
+            // Determine which zone we're in (works for both standard and bottom bar)
+            const entryZoneEnd =
+              state.phase === "inBottomBar"
+                ? BOTTOM_ENTRY_ZONE_END
+                : ENTRY_ZONE_END;
+            const exitZoneStart =
+              state.phase === "inBottomBar"
+                ? BOTTOM_EXIT_ZONE_START
+                : EXIT_ZONE_START;
+
+            if (fluidProgress < entryZoneEnd) {
+              // ENTRY ZONE: Squash dramatically on impact
+              yScale = ENTRY_SQUASH_SCALE;
+            } else if (fluidProgress >= exitZoneStart) {
+              // EXIT ZONE: Stretch as droplet exits/hangs
+              const exitProgress =
+                (fluidProgress - exitZoneStart) / (1.0 - exitZoneStart);
+              yScale = 1.0 + (EXIT_STRETCH_SCALE - 1.0) * exitProgress;
             } else {
-              state.graphic.scale.set(state.scale);
+              // MIDDLE ZONE: Normal scale with gentle variation for text
+              if (state.phase === "inText") {
+                yScale = 1 + Math.sin(fluidProgress * Math.PI) * 0.1;
+              }
             }
+
+            state.graphic.scale.set(state.scale, state.scale * yScale);
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
             // Merge into puddle - slow down but keep minimum velocity
@@ -698,7 +737,13 @@ export default function PixiDropletIndividual() {
             const mergeProgress = (dropletBottom - bottomPuddleSurface) / 40;
             const mergeFade = Math.max(0, 1 - mergeProgress);
             state.graphic.alpha = mergeFade;
-            state.graphic.scale.set(state.scale * (1 + mergeProgress * 0.3));
+            // Merge: gradually squash and widen as it spreads into puddle
+            const mergeXScale = 1 + mergeProgress * 0.3;
+            const mergeYScale = 1 - mergeProgress * 0.3; // Squash vertically as it spreads
+            state.graphic.scale.set(
+              state.scale * mergeXScale,
+              state.scale * mergeYScale,
+            );
           }
 
           // Update position with velocity (always - MIN_VELOCITY ensures movement)
