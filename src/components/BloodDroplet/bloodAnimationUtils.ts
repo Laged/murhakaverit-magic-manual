@@ -23,6 +23,7 @@ export interface Ripple {
   amplitude: number; // Ripple strength
   phase: number; // Animation phase (0-1)
   decay: number; // Decay rate per frame
+  radius: number; // Influence radius of the ripple
 }
 
 /**
@@ -203,10 +204,11 @@ export function updateRipples(ripples: Ripple[], dt: number): Ripple[] {
   return ripples
     .map((ripple) => ({
       ...ripple,
-      phase: ripple.phase + dt,
+      // Phase does not advance for growth ripples, they just decay
+      phase: ripple.phase + (ripple.radius > 200 ? 0 : dt),
       amplitude: ripple.amplitude * ripple.decay,
     }))
-    .filter((ripple) => ripple.amplitude > 0.5 && ripple.phase < 1.0);
+    .filter((ripple) => ripple.amplitude > 0.1);
 }
 
 /**
@@ -220,7 +222,8 @@ export function generateEdgeWithRipples(
   frequency: number,
   time: number,
   roughness: number,
-  ripples: Ripple[],
+  visualRipples: Ripple[],
+  growthRipples: Ripple[],
   segments: number = 50,
 ): Point[] {
   const basePoints = generateOrganicEdge(
@@ -235,25 +238,32 @@ export function generateEdgeWithRipples(
 
   // Apply ripple distortions
   return basePoints.map((point) => {
-    let rippleOffset = 0;
+    let yOffset = 0;
 
-    ripples.forEach((ripple) => {
-      // Calculate distance from ripple center
+    // 1. Apply persistent growth ripples to the base height
+    growthRipples.forEach((ripple) => {
       const dist = Math.abs(point.x - ripple.x);
-      const maxDist = 200; // Ripple influence radius
+      if (dist < ripple.radius) {
+        // Growth ripples are a simple cosine mound
+        const falloff = (1 + Math.cos((dist / ripple.radius) * Math.PI)) / 2;
+        yOffset -= falloff * ripple.amplitude; // Subtract because we draw upwards
+      }
+    });
 
-      if (dist < maxDist) {
-        // Ripple wave: sin(phase * 2π) * falloff * amplitude
-        const falloff = 1 - dist / maxDist;
+    // 2. Apply short-lived visual ripples on top
+    visualRipples.forEach((ripple) => {
+      const dist = Math.abs(point.x - ripple.x);
+      if (dist < ripple.radius) {
+        const falloff = (1 - dist / ripple.radius) ** 2;
         const wave =
-          Math.sin(ripple.phase * Math.PI * 4) * falloff * ripple.amplitude;
-        rippleOffset += wave;
+          Math.sin(ripple.phase * Math.PI * 2) * falloff * ripple.amplitude;
+        yOffset += wave;
       }
     });
 
     return {
       x: point.x,
-      y: point.y + rippleOffset,
+      y: point.y + yOffset,
     };
   });
 }

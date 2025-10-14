@@ -54,6 +54,8 @@ const MAX_VELOCITY = 12; // Terminal velocity (max fall speed)
 const MIN_VELOCITY = 1; // Minimum velocity - ensures droplets always fall
 const DEBUG_SHOW_BOUNDING_BOXES = false; // Show droplet bounding boxes for debugging
 
+const SPAWN_HORIZONTAL_VELOCITY = 10; // pixels/sec, drift left
+
 // === FLUID PHYSICS - FRICTION CURVES (TUNE THESE!) ===
 // Entry zone (0.0 - 0.1): High impact friction when entering fluid
 const ENTRY_FRICTION = 0.5; // Strong impact deceleration (50% velocity retained)
@@ -96,6 +98,7 @@ interface DropletState {
   elapsedTime: number;
   delay: number;
   offset: number;
+  targetOffset: number; // For the new "approaching" phase
   // Physics state
   x: number; // Current Y position
   y: number; // Current Y position
@@ -337,11 +340,13 @@ export default function PixiDropletIndividual() {
       // Mobile: fewer droplets and adjusted blur for performance
       const mobileDropletCount = isMobile ? 4 : NUM_DROPLETS;
 
-      // Adjust blur and alpha for mobile - less blur so droplets are visible
+      // Adjust blur and alpha for mobile to be proportional to droplet size
       if (isMobile) {
-        blurFilter.strength = 25;
-        alphaMatrix.matrix[14] = 20; // Reduce alpha multiply
-        alphaMatrix.matrix[19] = -3; // Reduce alpha offset
+        // Weaker blur for smaller droplets to prevent them from disappearing
+        blurFilter.strength = BLUR_STRENGTH * MOBILE_DROPLET_WIDTH_SCALE;
+        // Increase alpha contrast to compensate for the weaker blur
+        alphaMatrix.matrix[14] = 25;
+        alphaMatrix.matrix[19] = -4;
       }
 
       // Create multiple droplets
@@ -364,7 +369,8 @@ export default function PixiDropletIndividual() {
           scale: minScale + Math.random() * scaleRange,
           elapsedTime: 0,
           delay: Math.random() * DROPLET_MAX_DELAY,
-          offset: 0, // Will be set by resetDroplet based on text bounds
+          offset: 0, // Will be set by resetDroplet
+          targetOffset: 0, // Will be set by resetDroplet
           x: 0,
           y: 0,
           velocity: 0,
@@ -444,6 +450,7 @@ export default function PixiDropletIndividual() {
         state.scale = DROPLET_MIN_SCALE + Math.random() * scaleRange;
         state.elapsedTime = 0;
         state.delay = Math.random() * DROPLET_MAX_DELAY;
+        state.x = 0; // BUG FIX: Reset horizontal drift
 
         // Calculate droplet position based on actual text bounds
         const textBounds = titleText.getBounds();
@@ -452,34 +459,28 @@ export default function PixiDropletIndividual() {
         const textWidth = textBounds.width;
 
         // Estimate character width to avoid rightmost chars
-        // Creepster font is roughly 0.6x fontSize wide per character
         const charWidth = fontSize * 0.6;
 
-        // Calculate droplet width for spawn offset (accounts for top bar tilt)
         const dropletWidth = isMobile
           ? DROPLET_BASE_WIDTH * MOBILE_DROPLET_WIDTH_SCALE * state.scale
           : DROPLET_BASE_WIDTH * state.scale;
 
-        // Random position within text bounds
-        // Left: 5% margin to avoid leftmost chars
-        // Right: subtract charWidth to avoid rightmost chars (-, T)
-        // Add droplet width offset to account for left-ward gravity in top bar
+        // Set target destination
         const leftMargin = textWidth * 0.05;
         const minX = textLeft + leftMargin + dropletWidth;
         const maxX = textRight - charWidth;
-        state.offset = minX + Math.random() * (maxX - minX);
+        state.targetOffset = minX + Math.random() * (maxX - minX);
 
-        // Reset physics state to prevent flicker
-        const dropletHeight =
-          DROPLET_BASE_HEIGHT * state.scale * DROPLET_BASE_SIZE * 1.5;
-        const halfHeight = dropletHeight / 2;
-        state.y = BAR_HEIGHT - halfHeight - 10;
-        state.velocity = 0;
+        // Set initial state for "spawn" phase (which now includes approaching)
         state.phase = "spawn";
+        state.offset = app.screen.width + 100 + Math.random() * 200; // Start off-screen right
+        state.y = BAR_HEIGHT / 2 + (Math.random() - 0.5) * 20; // Start within top bar
+        state.velocity = 0;
 
-        // Reset graphics state
-        state.graphic.alpha = 0; // Start invisible
-        state.graphic.scale.set(0.3 * state.scale); // Start small
+        // Reset graphics state to be visible
+        state.graphic.alpha = 1.0;
+        state.graphic.scale.set(0.5 * state.scale); // Set a minimum visible scale
+        state.currentYScale = 1.0;
 
         // KEY: clear() + redraw with new scale
         drawDroplet(state.graphic, state.scale);
@@ -671,34 +672,64 @@ export default function PixiDropletIndividual() {
             return current + (target - current) * speed;
           };
 
-          // SPAWN PHASE: Emerge from top bar
           if (state.phase === "spawn") {
-            const velocityScale = isMobile ? MOBILE_SPAWN_VELOCITY_SCALE : 1.0;
-            const spawnProgress = Math.min(elapsed / 0.5, 1.0);
-            const spawnThreshold = 0.9;
-            // TODO: Make state.x move the droplet while in top bar
-            //const spawnOffset =
-            //  DROPLET_BASE_WIDTH - DROPLET_BASE_WIDTH * spawnProgress;
-            state.x = 0;
-            state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
-            state.velocity = spawnProgress * 2 * velocityScale;
-            // Spawn starts squashed, gradually returns to normal
-            const spawnScale = Math.max(0.5, spawnProgress);
-            const targetYScale =
-              ENTRY_SQUASH_SCALE + (1.0 - ENTRY_SQUASH_SCALE) * spawnProgress;
-            state.currentYScale = lerp(
-              state.currentYScale,
-              targetYScale,
-              SCALE_LERP_SPEED,
-            );
-            state.graphic.scale.set(
-              spawnScale * state.scale,
-              spawnScale * state.scale * state.currentYScale,
-            );
-            state.graphic.alpha = 1;
+            const distance = state.targetOffset - state.offset;
 
-            if (spawnProgress >= spawnThreshold) {
-              state.phase = "freefall";
+            // Part 1: Traveling horizontally until the target is reached
+            if (Math.abs(distance) > 1) {
+              const travelSpeed = 1500; // Fast travel speed
+              const moveAmount = travelSpeed * dt;
+              const direction = distance > 0 ? 1 : -1;
+
+              // Move without overshooting (this is the anti-jitter fix)
+              if (moveAmount >= Math.abs(distance)) {
+                state.offset = state.targetOffset;
+              } else {
+                state.offset += direction * moveAmount;
+              }
+
+              // --- VISUALS DURING TRAVEL ---
+              state.y = BAR_HEIGHT + 30; // Position it visibly below the bar
+              state.graphic.scale.set(state.scale * 2.0, state.scale * 0.2); // Streak shape
+              state.graphic.alpha = 0.7;
+            } else {
+              // Part 2: Arrived at target, now begin the "real" spawn
+
+              // Restore the droplet's shape from the streak
+              drawDroplet(state.graphic, state.scale);
+
+              const velocityScale = isMobile
+                ? MOBILE_SPAWN_VELOCITY_SCALE
+                : 1.0;
+              const spawnProgress = Math.min(elapsed / 0.5, 1.0);
+              const spawnThreshold = 0.9;
+
+              // Add the exit ripple now that we are at the destination
+              if (topBarAnim) {
+                topBarAnim.addExitRipple(state.offset + state.x, -5);
+              }
+
+              // Emerge from the bar
+              state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
+              state.velocity = spawnProgress * 2 * velocityScale;
+
+              const spawnScale = Math.max(0.5, spawnProgress);
+              const targetYScale =
+                ENTRY_SQUASH_SCALE + (1.0 - ENTRY_SQUASH_SCALE) * spawnProgress;
+              state.currentYScale = lerp(
+                state.currentYScale,
+                targetYScale,
+                SCALE_LERP_SPEED,
+              );
+              state.graphic.scale.set(
+                spawnScale * state.scale,
+                spawnScale * state.scale * state.currentYScale,
+              );
+              state.graphic.alpha = 1;
+
+              if (spawnProgress >= spawnThreshold) {
+                state.phase = "freefall";
+              }
             }
           }
 
@@ -741,7 +772,7 @@ export default function PixiDropletIndividual() {
               // Add ripple effect to bottom bar on merge
               if (bottomBarAnim && globalAnimTime >= ANIM_DROPLET_START) {
                 bottomBarAnim.addRipple(state.offset, state.velocity * 1.1);
-                bottomBarAnim.onDropletMerged();
+                bottomBarAnim.onDropletMerged(state.offset, state.scale);
               }
             }
           } else if (state.phase === "merge") {
@@ -903,10 +934,8 @@ export default function PixiDropletIndividual() {
           }
 
           // Update position with velocity (always - MIN_VELOCITY ensures movement)
-          state.y += state.velocity * dt * 60; // Normalize by 60fps
+          state.y += state.velocity * dt * 60;
 
-          // Apply position
-          // TODO: Make state.x move the droplet while in top bar
           state.graphic.x = state.offset + state.x;
           state.graphic.y = state.y;
 
@@ -919,17 +948,22 @@ export default function PixiDropletIndividual() {
               ? DROPLET_BASE_HEIGHT * MOBILE_DROPLET_HEIGHT_SCALE
               : DROPLET_BASE_HEIGHT;
 
+            // Use the graphic's actual scale for accurate box size
+            const currentWidth = debugBaseW * state.graphic.scale.x;
+            const currentHeight = debugBaseH * state.graphic.scale.y;
+
             state.debugBox.clear();
 
             // Color code by phase for easy visual debugging
             let phaseColor = 0xffffff;
             switch (state.phase) {
-              case "freefall":
+              case "spawn":
                 phaseColor = 0x00ff00; // Green
                 break;
-              case "inTopBar":
+              case "freefall":
                 phaseColor = 0xffff00; // Yellow
                 break;
+              case "inTopBar":
               case "inText":
                 phaseColor = 0x0000ff; // Blue
                 break;
@@ -945,13 +979,13 @@ export default function PixiDropletIndividual() {
             }
 
             state.debugBox.rect(
-              state.offset - debugBaseW / 2,
-              state.y - debugBaseH / 2,
-              debugBaseW,
-              debugBaseH,
+              state.offset + state.x - currentWidth / 2,
+              state.y - currentHeight / 2,
+              currentWidth,
+              currentHeight,
             );
             state.debugBox.stroke({ color: phaseColor, width: 2 });
-            state.debugBox.alpha = state.graphic.alpha;
+            state.debugBox.alpha = state.graphic.alpha > 0.1 ? 0.75 : 0.0;
           } else {
             state.debugBox.clear();
           }
