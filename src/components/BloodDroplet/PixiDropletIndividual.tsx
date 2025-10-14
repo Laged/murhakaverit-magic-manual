@@ -589,7 +589,7 @@ export default function PixiDropletIndividual() {
         crispTitleText.y = textY;
 
         // Calculate and cache text bounds
-        const mask = titleText.mask;
+        const _mask = titleText.mask;
         titleText.mask = null;
         const bounds = titleText.getBounds();
         textBounds = new Rectangle(

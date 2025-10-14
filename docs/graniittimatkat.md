@@ -2,12 +2,8 @@
 
 Graniittimatkan seikkailut kutsuvat jälleen 7.5. - 10.5.2026!
 
-Kaipaatko silmiä siristäviä löylyjä graniittisaunassa, kutkuttavia mysteereitä ja lupaa tehdä katalia petoksia? Olitpa sitten kokenut, mutta epäonnekas seikkailija, jolle Faaraon kirous jäi viime kerralla hampaankoloon tai innokas tulokas, joka janoaa Kaken legendaarista tomaatti-sellerisoppaa  – meillä on tarjota sinulle jotakin aivan uskomatonta.
+Kaipaatko silmiä siristäviä löylyjä graniittisaunassa, kutkuttavia mysteereitä ja vapaat kädet tehdä jotakin todella, siis TODELLA, peruuttamatonta? Olitpa sitten vanha ja päättäväinen tekijä, joka yhä yrittää päästää Faaraon kirouksen valloilleen, tai uusi ja vähän liian innokas sielu, joka janoaa Kaken ylistettyä tomaatti-sellerisoppaa – me lupaamme sinulle jotain aivan uskomatonta. Uskomattoman hyvää…tai pahaa… sen päätät sinä.
 
-Graniittimatkat suuntaavat jälleen tuttuihin maisemiin, idylliseen Storfinnhova Gårdiin, ensi vuoden toukokuussa. Yleisön pyynnöstä aloitamme murharituaalit jo torstaina ja päätämme ne sunnuntaina.
+Suuntaamme jälleen sinne, missä itse pahuus juurtaa juurensa: idylliseen ja viattomalta vaikuttavaan Storfinnhova Gårdiin. Yleisön painostuksesta (ja omien kierojen mielihalujemme takia) aloitamme rituaalit jo torstaina ja sunnuntaina aamun sarastaessa laskemme rivejä josko joku on vielä hengissä.
 
-Hyppää siis mukaan tähän ainutlaatuiseen matkaan täyttämällä ilmoittautumislomake alapuolelta. Nähdään Storfinnhovassa!
-
-Vinkki: Mikäli mielit taistella kynsin ja hampain metsäkylän tunnelmallisiin puumökkeihin tai vaadit elämääsi glamouria ja luksusta glamping-telttojen muodossa, olethan ripeä. Parhaat paikat viedään käsistä ensimmäisille ilmottautujille.
-
-Tärkeää: Tapahtuma on vain kutsutuille, eli olet todennäköisesti jo Whatsapp-ryhmässämme. Kiinnitäthän kuitenkin erityistä huomiota siihen, että kaikki tietosi ovat oikein lomaketta täyttäessäsi. Laita viestiä järjestäjille, jos jokin menee pieleen.
+Alkoiko pelottamaan vai mitä vielä odotat..? Tartu tähän tilaisuuteen ja hyppää mukaan täyttämällä ilmoittautumislomake alapuolelta. Nähdään Storfinnhovassa!
