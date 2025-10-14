@@ -58,6 +58,16 @@ const MIDDLE_FRICTION = 1.02; // Moderate friction (88% velocity retained)
 const EXIT_FRICTION = 0.9; // Strong hanging friction (60% velocity retained)
 const EXIT_ZONE_START = 0.9; // Last 30% of fluid
 
+// === MOBILE DEVICE SCALING (TUNE THESE!) ===
+const MOBILE_DROPLET_SCALE = 0.5; // Scale down droplet min size on mobile
+const MOBILE_DROPLET_WIDTH_SCALE = 0.7; // Width scaling for mobile droplets
+const MOBILE_DROPLET_HEIGHT_SCALE = 0.5; // Height scaling for mobile droplets
+const MOBILE_PHYSICS_SCALE = 0.7; // Overall physics size calculation scale
+const MOBILE_GRAVITY_SCALE = 0.85; // Reduce gravity on mobile
+const MOBILE_SPAWN_VELOCITY_SCALE = 0.1; // Slower spawn velocity on mobile
+const MOBILE_FLUID_VELOCITY_SCALE = 0.5; // Slower movement through fluids on mobile
+const MOBILE_MERGE_VELOCITY_SCALE = 0.1; // Slower merge on mobile
+
 interface DropletState {
   graphic: Graphics;
   debugBox: Graphics; // Visual bounding box for debugging
@@ -302,7 +312,9 @@ export default function PixiDropletIndividual() {
         crispContainer.addChild(debugBox);
 
         const scaleRange = DROPLET_MAX_SCALE - DROPLET_MIN_SCALE;
-        const minScale = isMobile ? DROPLET_MIN_SCALE * 0.5 : DROPLET_MIN_SCALE;
+        const minScale = isMobile
+          ? DROPLET_MIN_SCALE * MOBILE_DROPLET_SCALE
+          : DROPLET_MIN_SCALE;
         droplets.push({
           graphic,
           debugBox,
@@ -323,15 +335,14 @@ export default function PixiDropletIndividual() {
       };
 
       const drawDroplet = (graphic: Graphics, scale: number) => {
-        const mobileScaleDown = 0.7;
         const baseSize = isMobile
-          ? DROPLET_BASE_SIZE * mobileScaleDown
+          ? DROPLET_BASE_SIZE * MOBILE_DROPLET_WIDTH_SCALE
           : DROPLET_BASE_SIZE;
         const baseW = isMobile
-          ? DROPLET_BASE_WIDTH * mobileScaleDown
+          ? DROPLET_BASE_WIDTH * MOBILE_DROPLET_WIDTH_SCALE
           : DROPLET_BASE_WIDTH;
         const baseH = isMobile
-          ? DROPLET_BASE_HEIGHT * 0.5
+          ? DROPLET_BASE_HEIGHT * MOBILE_DROPLET_HEIGHT_SCALE
           : DROPLET_BASE_HEIGHT;
         const w = baseW * scale * baseSize;
         const h = baseH * scale * baseSize;
@@ -494,12 +505,11 @@ export default function PixiDropletIndividual() {
           }
 
           // Calculate droplet dimensions (per-droplet size!)
-          const mobileScaleDown = isMobile ? 0.7 : 1;
           const physBaseSize = isMobile
-            ? DROPLET_BASE_SIZE * mobileScaleDown
+            ? DROPLET_BASE_SIZE * MOBILE_PHYSICS_SCALE
             : DROPLET_BASE_SIZE;
           const physBaseH = isMobile
-            ? DROPLET_BASE_HEIGHT * 0.5
+            ? DROPLET_BASE_HEIGHT * MOBILE_DROPLET_HEIGHT_SCALE
             : DROPLET_BASE_HEIGHT;
           const dropletHeight = physBaseH * state.scale * physBaseSize;
           const halfHeight = dropletHeight / 2;
@@ -528,11 +538,11 @@ export default function PixiDropletIndividual() {
 
           // SPAWN PHASE: Emerge from top bar
           if (state.phase === "spawn") {
-            const velocityScale = isMobile ? 0.1 : 1.0;
+            const velocityScale = isMobile ? MOBILE_SPAWN_VELOCITY_SCALE : 1.0;
             const spawnProgress = Math.min(elapsed / 0.5, 1.0);
             const spawnThreshold = 0.9;
             state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
-            state.velocity = spawnProgress * 2 * velocityScale; // Gentle initial velocity
+            state.velocity = spawnProgress * 2 * velocityScale;
             state.graphic.scale.set(Math.max(0.5, spawnProgress) * state.scale);
             state.graphic.alpha = 1;
 
@@ -583,12 +593,11 @@ export default function PixiDropletIndividual() {
           // APPLY PHYSICS based on current phase
           if (state.phase === "freefall") {
             // Accelerate with gravity
-            const velocityScale = isMobile ? 0.85 : 1;
+            const gravityScale = isMobile ? MOBILE_GRAVITY_SCALE : 1;
             state.velocity = Math.min(
-              state.velocity + GRAVITY * velocityScale,
+              state.velocity + GRAVITY * gravityScale,
               MAX_VELOCITY,
             );
-            //state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
             state.graphic.scale.set(state.scale);
             state.graphic.alpha = 1;
           } else if (
@@ -633,9 +642,14 @@ export default function PixiDropletIndividual() {
                 (EXIT_FRICTION - MIDDLE_FRICTION) * exitProgress;
             }
 
-            const velocityScale = isMobile ? 0.5 : 1;
-            state.velocity *= frictionFactor * velocityScale;
-            state.velocity = Math.min(state.velocity + GRAVITY, MAX_VELOCITY);
+            const fluidVelocityScale = isMobile
+              ? MOBILE_FLUID_VELOCITY_SCALE
+              : 1;
+            state.velocity *= frictionFactor;
+            state.velocity = Math.min(
+              state.velocity + GRAVITY * fluidVelocityScale,
+              MAX_VELOCITY,
+            );
 
             // Visual effects for text only
             if (state.phase === "inText") {
@@ -648,8 +662,10 @@ export default function PixiDropletIndividual() {
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
             // Merge into puddle - slow down but keep minimum velocity
-            const velocityScale = isMobile ? 0.1 : 0.7;
-            state.velocity *= velocityScale;
+            const mergeVelocityScale = isMobile
+              ? MOBILE_MERGE_VELOCITY_SCALE
+              : 0.7;
+            state.velocity *= mergeVelocityScale;
             state.velocity = Math.max(state.velocity, MIN_VELOCITY);
             const mergeProgress = (dropletBottom - bottomPuddleSurface) / 40;
             const mergeFade = Math.max(0, 1 - mergeProgress);
@@ -666,45 +682,48 @@ export default function PixiDropletIndividual() {
 
           // Draw debug bounding box
           if (DEBUG_SHOW_BOUNDING_BOXES) {
-            const mobileScaleDown = 0.5;
-            const baseW = isMobile
-              ? DROPLET_BASE_WIDTH * mobileScaleDown
+            const debugBaseW = isMobile
+              ? DROPLET_BASE_WIDTH * MOBILE_PHYSICS_SCALE
               : DROPLET_BASE_WIDTH;
-            const baseH = isMobile
-              ? DROPLET_BASE_HEIGHT * 0.5
+            const debugBaseH = isMobile
+              ? DROPLET_BASE_HEIGHT * MOBILE_DROPLET_HEIGHT_SCALE
               : DROPLET_BASE_HEIGHT;
 
             state.debugBox.clear();
-            // Draw box centered on droplet position
-            let currentColor = 0xffffff;
+
+            // Color code by phase for easy visual debugging
+            let phaseColor = 0xffffff;
             switch (state.phase) {
               case "freefall":
-                currentColor = 0x00ff00;
+                phaseColor = 0x00ff00; // Green
                 break;
               case "inTopBar":
-                currentColor = 0xffff00;
+                phaseColor = 0xffff00; // Yellow
                 break;
               case "inText":
-                currentColor = 0x0000ff;
+                phaseColor = 0x0000ff; // Blue
                 break;
               case "inBottomBar":
-                currentColor = 0x00000;
+                phaseColor = 0xff00ff; // Magenta
+                break;
+              case "merge":
+                phaseColor = 0xff0000; // Red
                 break;
               default:
-                currentColor = 0xffffff;
+                phaseColor = 0xffffff; // White
                 break;
             }
 
             state.debugBox.rect(
-              state.offset - baseW / 2,
-              state.y - baseH / 2,
-              baseW,
-              baseH,
+              state.offset - debugBaseW / 2,
+              state.y - debugBaseH / 2,
+              debugBaseW,
+              debugBaseH,
             );
-            state.debugBox.stroke({ color: currentColor, width: 2 }); // Green box
-            state.debugBox.alpha = state.graphic.alpha; // Match droplet alpha
+            state.debugBox.stroke({ color: phaseColor, width: 2 });
+            state.debugBox.alpha = state.graphic.alpha;
           } else {
-            state.debugBox.clear(); // Hide if debug disabled
+            state.debugBox.clear();
           }
         });
       };
