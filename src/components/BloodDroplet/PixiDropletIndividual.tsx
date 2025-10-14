@@ -366,11 +366,6 @@ export default function PixiDropletIndividual() {
       titleText.anchor.set(0.5);
       root.addChild(titleText);
 
-      // Create mask for text drip animation
-      const textMask = new Graphics();
-      root.addChild(textMask);
-      titleText.mask = textMask;
-
       // Create crisp white text overlay (no filters)
       const crispTitleText = new Text({
         text: "murha-\nkaverit",
@@ -592,6 +587,12 @@ export default function PixiDropletIndividual() {
           bounds.height,
         );
         titleText.mask = mask;
+
+        if (!titleText.mask) {
+          // Create mask only once
+          const graphicsMask = new Graphics();
+          titleText.mask = graphicsMask;
+        }
 
         // DEBUG: Draw blue border around text bounds
         if (DEBUG_SHOW_BOUNDING_BOXES) {
@@ -1013,12 +1014,16 @@ export default function PixiDropletIndividual() {
                   state.scale) /
                 2
               : (DROPLET_BASE_WIDTH * state.scale) / 2;
-            textMask.circle(
-              state.graphic.x,
-              state.graphic.y,
-              dropletRadius * 2.5,
-            );
-            textMask.fill(0xffffff);
+
+            const mask = titleText.mask as Graphics;
+            if (mask) {
+              mask.circle(
+                state.graphic.x,
+                state.graphic.y,
+                dropletRadius * 2.5,
+              );
+              mask.fill(0xffffff);
+            }
           }
 
           // Draw debug bounding box
