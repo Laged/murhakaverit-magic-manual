@@ -91,7 +91,7 @@ export function createDripStreaks(
   width: number,
   minSpeed: number,
   maxSpeed: number,
-  baseWidth: number,
+  _baseWidth: number,
   edgeRoughness: number,
 ): DripStreak[] {
   const drips: DripStreak[] = [];
@@ -138,7 +138,7 @@ export function createDripStreaks(
  * @param edgeVariation - Array of random offsets for organic edges
  */
 export function drawDripShape(
-  graphics: any, // Graphics type from PixiJS
+  graphics: import("pixi.js").Graphics, // Graphics type from PixiJS
   x: number,
   topY: number,
   bottomY: number,

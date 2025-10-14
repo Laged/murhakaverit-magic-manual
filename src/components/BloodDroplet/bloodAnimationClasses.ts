@@ -6,29 +6,17 @@
 
 // Use any for Graphics type since we're in .ts file
 // Will be properly typed when used in .tsx files
-type Graphics = any;
+type Graphics = import("pixi.js").Graphics;
 
 import {
-  createDripStreaks,
-  type DripStreak,
-  drawDripShape,
   easeInOutSine,
   easeOutCubic,
   generateEdgeWithRipples,
   generateOrganicEdge,
   lerp,
-  type Point,
   type Ripple,
   updateRipples,
 } from "./bloodAnimationUtils";
-
-// === TEXT DRIP ANIMATION CONSTANTS ===
-export const TEXT_DRIP_DURATION = 1.2;
-export const TEXT_NUM_DRIPS = 8;
-export const TEXT_DRIP_SPEED_MIN = 0.7;
-export const TEXT_DRIP_SPEED_MAX = 1.3;
-export const TEXT_DRIP_WIDTH = 50;
-export const TEXT_DRIP_EDGE_ROUGHNESS = 10;
 
 // === TOP BAR ANIMATION CONSTANTS ===
 export const TOP_BAR_ANIM_DURATION = 1.0;
@@ -51,98 +39,8 @@ export const BOTTOM_BAR_GROWTH_RIPPLE_RADIUS = 300; // Wider radius for a gentle
 
 // === ANIMATION TIMING ===
 export const ANIM_TOP_BAR_START = 0.0;
-export const ANIM_TEXT_DRIP_START = 0.3;
 export const ANIM_DROPLET_START = 1.0; // Start droplets after top bar completes (was 1.5)
 export const ANIM_BOTTOM_PUDDLE_START = 2.0;
-
-/**
- * TextDripMask - Manages animated mask for text reveal
- * Creates multiple vertical drip streaks that flow downward
- */
-export class TextDripMask {
-  private mask: Graphics;
-  private drips: DripStreak[];
-  private elapsedTime: number = 0;
-  private duration: number;
-  private textHeight: number;
-  private textTop: number;
-  private isMobile: boolean;
-
-  constructor(
-    mask: Graphics,
-    textWidth: number,
-    textHeight: number,
-    textTop: number,
-    isMobile: boolean = false,
-  ) {
-    this.mask = mask;
-    this.textHeight = textHeight;
-    this.textTop = textTop;
-    this.isMobile = isMobile;
-    this.duration = TEXT_DRIP_DURATION;
-
-    // Create drip streaks - fewer on mobile
-    const numDrips = isMobile ? 4 : TEXT_NUM_DRIPS;
-    this.drips = createDripStreaks(
-      numDrips,
-      textWidth,
-      TEXT_DRIP_SPEED_MIN,
-      TEXT_DRIP_SPEED_MAX,
-      TEXT_DRIP_WIDTH,
-      TEXT_DRIP_EDGE_ROUGHNESS,
-    );
-  }
-
-  /**
-   * Update animation progress
-   */
-  update(dt: number): void {
-    this.elapsedTime += dt;
-    const progress = Math.min(this.elapsedTime / this.duration, 1);
-
-    // Update each drip's progress with individual speeds
-    this.drips.forEach((drip) => {
-      // Each drip progresses at its own speed
-      drip.currentProgress = Math.min(progress * drip.speed, 1);
-    });
-  }
-
-  /**
-   * Draw the mask
-   */
-  draw(): void {
-    this.mask.clear();
-
-    // Always show full text - mask is just for drip effect during animation
-    // Draw a large rectangle to show all text
-    this.mask.rect(-10000, -10000, 20000, 20000);
-    this.mask.fill({ color: 0xffffff, alpha: 0 });
-  }
-
-  /**
-   * Check if animation is complete
-   */
-  isComplete(): boolean {
-    return this.elapsedTime >= this.duration;
-  }
-
-  /**
-   * Get current progress (0-1)
-   */
-  getProgress(): number {
-    return Math.min(this.elapsedTime / this.duration, 1);
-  }
-
-  /**
-   * Reset animation
-   */
-  reset(): void {
-    this.elapsedTime = 0;
-    this.drips.forEach((drip) => {
-      drip.currentProgress = 0;
-    });
-  }
-}
 
 /**
  * BarAnimation - Manages bar growth animations with organic edges
@@ -156,7 +54,6 @@ export class BarAnimation {
   private elapsedTime: number = 0;
   private duration: number;
   private width: number;
-  private yPosition: number;
   private ripples: Ripple[] = [];
   private growthRipples: Ripple[] = []; // For localized growth
   private exitRipples: Ripple[] = []; // For top bar droplet exits
@@ -170,13 +67,11 @@ export class BarAnimation {
     bar: Graphics,
     type: "top" | "bottom",
     width: number,
-    yPosition: number,
     isMobile: boolean = false,
   ) {
     this.bar = bar;
     this.type = type;
     this.width = width;
-    this.yPosition = yPosition;
     this.isMobile = isMobile;
 
     if (type === "top") {
@@ -212,7 +107,7 @@ export class BarAnimation {
   /**
    * Update top bar animation (bleed down)
    */
-  private updateTopBar(dt: number): void {
+  private updateTopBar(_dt: number): void {
     const progress = Math.min(this.elapsedTime / this.duration, 1);
     const eased = easeInOutSine(progress);
 
@@ -295,7 +190,7 @@ export class BarAnimation {
   /**
    * Draw top bar with wavy bottom edge
    */
-  private drawTopBar(offset: number): void {
+  private drawTopBar(_offset: number): void {
     // Top edge is straight
     this.bar.moveTo(0, 0);
     this.bar.lineTo(this.width, 0);
@@ -354,7 +249,7 @@ export class BarAnimation {
   /**
    * Draw bottom bar with rippled top edge
    */
-  private drawBottomBar(offset: number): void {
+  private drawBottomBar(_offset: number): void {
     const verticalOffset = 0; // Extra padding for the blur filter
 
     // First, draw the main wavy bar.
