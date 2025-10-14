@@ -31,11 +31,16 @@
     - Droplet slowdown/acceleration now responds to actual text position
   - Commit: `fix: make droplet physics responsive to text position`
 
-- [ ] **Issue #3: Gray background appears after PixiJS load**
+- [x] **Issue #3: Gray background appears after PixiJS load**
   - Problem: Background should be all black, gray appears after PixiJS renders
   - Solution: Find and remove gray background CSS/styling
-  - Status: Not started
+  - Status: ✅ Complete
+  - Changes:
+    - Changed PixiJS canvas background from `#101414` (dark gray) to `#000000` (pure black)
+    - Now matches page `bg-black` class exactly
+    - Seamless black background throughout animation
   - Commit: `fix: remove gray background, keep pure black`
+  - Branch: `issue-3-gray-background`
 
 - [ ] **Issue #4: Red bars don't prerender on HTML/CSS**
   - Problem: Red bars appear suddenly after PixiJS loads instead of being visible immediately
