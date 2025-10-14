@@ -9,6 +9,14 @@ export async function POST(request: Request) {
     // Validate the form data with Zod
     const validatedData = SignUpFormSchema.parse(body);
 
+    // Enforce max 4 Pelikiinnostus selections
+    if (
+      validatedData.Pelikiinnostus &&
+      validatedData.Pelikiinnostus.length > 4
+    ) {
+      validatedData.Pelikiinnostus = validatedData.Pelikiinnostus.slice(0, 4);
+    }
+
     // Check accommodation availability before submitting
     const options = await getFormOptions();
     const selectedMajoitus = validatedData.Majoitus;
