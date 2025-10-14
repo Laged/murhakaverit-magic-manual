@@ -23,6 +23,14 @@ export const metadata: Metadata = {
     description: "Murha on kivempaa kavereiden kanssa.",
     type: "website",
     url: "https://murhakaverit.fi",
+    images: [
+      {
+        url: "https://murhakaverit.fi/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "MURHAKAVERIT",
+      },
+    ],
   },
 };
 
