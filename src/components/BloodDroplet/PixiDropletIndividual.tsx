@@ -44,7 +44,7 @@ const TIP_OFFSET_VARIATION = 10; // pixels (how much droplet shapes vary)
 const GRAVITY = 0.8; // Acceleration in freefall (pixels/frame²)
 const MAX_VELOCITY = 12; // Terminal velocity (max fall speed)
 const MIN_VELOCITY = 1; // Minimum velocity - ensures droplets always fall
-const DEBUG_SHOW_BOUNDING_BOXES = true; // Show droplet bounding boxes for debugging
+const DEBUG_SHOW_BOUNDING_BOXES = false; // Show droplet bounding boxes for debugging
 
 // === FLUID PHYSICS - FRICTION CURVES (TUNE THESE!) ===
 // Entry zone (0.0 - 0.1): High impact friction when entering fluid
@@ -66,15 +66,15 @@ const BOTTOM_EXIT_FRICTION = 0.7; // Deep in puddle, slowing down further
 const BOTTOM_EXIT_ZONE_START = 0.6; // Last 40% of puddle
 
 // === DROPLET SQUASH & STRETCH (TUNE THESE!) ===
-const FREEFALL_STRETCH_SCALE = 1.3; // Y-scale during freefall (1.3 = 30% taller)
-const EXIT_STRETCH_SCALE = 1.2; // Y-scale during exit from fluid (1.2 = 20% taller)
+const FREEFALL_STRETCH_SCALE = 1.5; // Y-scale during freefall (1.3 = 30% taller)
+const EXIT_STRETCH_SCALE = 1.7; // Y-scale during exit from fluid (1.2 = 20% taller)
 const ENTRY_SQUASH_SCALE = 0.7; // Y-scale on entry/impact (0.7 = 30% shorter/compressed)
-const SCALE_LERP_SPEED = 0.15; // How fast to interpolate scale changes (0.15 = 15% per frame)
+const SCALE_LERP_SPEED = 0.25; // How fast to interpolate scale changes (0.15 = 15% per frame)
 
 // === MOBILE DEVICE SCALING (TUNE THESE!) ===
 const MOBILE_DROPLET_SCALE = 0.5; // Scale down droplet min size on mobile
 const MOBILE_DROPLET_WIDTH_SCALE = 0.7; // Width scaling for mobile droplets
-const MOBILE_DROPLET_HEIGHT_SCALE = 1.0; // Height scaling for mobile droplets
+const MOBILE_DROPLET_HEIGHT_SCALE = 0.8; // Height scaling for mobile droplets
 const MOBILE_PHYSICS_SCALE = 0.5; // Overall physics size calculation scale
 const MOBILE_GRAVITY_SCALE = 0.5; // Reduce gravity on mobile
 const MOBILE_SPAWN_VELOCITY_SCALE = 0.1; // Slower spawn velocity on mobile
@@ -312,7 +312,7 @@ export default function PixiDropletIndividual() {
       // Adjust blur and alpha for mobile - less blur so droplets are visible
       if (isMobile) {
         blurFilter.strength = 20;
-        alphaMatrix.matrix[14] = 10; // Reduce alpha multiply
+        alphaMatrix.matrix[14] = 15; // Reduce alpha multiply
         alphaMatrix.matrix[19] = -3; // Reduce alpha offset
       }
 
@@ -535,7 +535,7 @@ export default function PixiDropletIndividual() {
           // Get collision surfaces
           const topBarBottom = BAR_HEIGHT;
           const textBounds = titleText.getBounds();
-          const textTop = textBounds.y;
+          const textTop = textBounds.y + dropletHeight;
           const textBottom = textBounds.y + textBounds.height - dropletHeight;
           const bottomPuddleSurface = height - BAR_HEIGHT;
 
@@ -618,7 +618,7 @@ export default function PixiDropletIndividual() {
             }
           } else if (state.phase === "inBottomBar") {
             // Transition to merge when deep enough
-            if (dropletBottom > bottomPuddleSurface + 40) {
+            if (dropletBottom > bottomPuddleSurface + dropletHeight) {
               state.phase = "merge";
             }
           } else if (state.phase === "merge") {
