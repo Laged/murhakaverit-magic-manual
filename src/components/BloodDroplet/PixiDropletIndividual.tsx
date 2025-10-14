@@ -126,7 +126,7 @@ export default function PixiDropletIndividual() {
         resizeTo: mountNode,
         autoDensity: true,
         antialias: true,
-        background: "#101414",
+        background: "#000000", // Pure black to match page bg-black
       });
 
       mountNode.appendChild(app.canvas);
