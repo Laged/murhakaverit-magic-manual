@@ -69,6 +69,7 @@ const BOTTOM_EXIT_ZONE_START = 0.6; // Last 40% of puddle
 const FREEFALL_STRETCH_SCALE = 1.3; // Y-scale during freefall (1.3 = 30% taller)
 const EXIT_STRETCH_SCALE = 1.2; // Y-scale during exit from fluid (1.2 = 20% taller)
 const ENTRY_SQUASH_SCALE = 0.7; // Y-scale on entry/impact (0.7 = 30% shorter/compressed)
+const SCALE_LERP_SPEED = 0.15; // How fast to interpolate scale changes (0.15 = 15% per frame)
 
 // === MOBILE DEVICE SCALING (TUNE THESE!) ===
 const MOBILE_DROPLET_SCALE = 0.5; // Scale down droplet min size on mobile
@@ -91,6 +92,8 @@ interface DropletState {
   y: number; // Current Y position
   velocity: number; // Current velocity (pixels per frame)
   phase: "spawn" | "freefall" | "inTopBar" | "inText" | "inBottomBar" | "merge";
+  // Animation state
+  currentYScale: number; // Current Y-scale for smooth interpolation
 }
 
 export default function PixiDropletIndividual() {
@@ -337,6 +340,7 @@ export default function PixiDropletIndividual() {
           y: 0,
           velocity: 0,
           phase: "spawn",
+          currentYScale: 1.0, // Start at normal scale
         });
       }
 
@@ -550,6 +554,11 @@ export default function PixiDropletIndividual() {
             return; // Skip this frame to prevent flicker
           }
 
+          // Helper: Smooth interpolation (lerp)
+          const lerp = (current: number, target: number, speed: number) => {
+            return current + (target - current) * speed;
+          };
+
           // SPAWN PHASE: Emerge from top bar
           if (state.phase === "spawn") {
             const velocityScale = isMobile ? MOBILE_SPAWN_VELOCITY_SCALE : 1.0;
@@ -559,11 +568,16 @@ export default function PixiDropletIndividual() {
             state.velocity = spawnProgress * 2 * velocityScale;
             // Spawn starts squashed, gradually returns to normal
             const spawnScale = Math.max(0.5, spawnProgress);
-            const spawnYScale =
+            const targetYScale =
               ENTRY_SQUASH_SCALE + (1.0 - ENTRY_SQUASH_SCALE) * spawnProgress;
+            state.currentYScale = lerp(
+              state.currentYScale,
+              targetYScale,
+              SCALE_LERP_SPEED,
+            );
             state.graphic.scale.set(
               spawnScale * state.scale,
-              spawnScale * state.scale * spawnYScale,
+              spawnScale * state.scale * state.currentYScale,
             );
             state.graphic.alpha = 1;
 
@@ -619,10 +633,15 @@ export default function PixiDropletIndividual() {
               state.velocity + GRAVITY * gravityScale,
               MAX_VELOCITY,
             );
-            // Stretch droplet during freefall (elongate Y)
+            // Stretch droplet during freefall (elongate Y) - smoothly interpolate
+            state.currentYScale = lerp(
+              state.currentYScale,
+              FREEFALL_STRETCH_SCALE,
+              SCALE_LERP_SPEED,
+            );
             state.graphic.scale.set(
               state.scale,
-              state.scale * FREEFALL_STRETCH_SCALE,
+              state.scale * state.currentYScale,
             );
             state.graphic.alpha = 1;
           } else if (
@@ -698,7 +717,7 @@ export default function PixiDropletIndividual() {
             );
 
             // SQUASH & STRETCH based on fluid zone
-            let yScale = 1.0;
+            let targetYScale = 1.0;
 
             // Determine which zone we're in (works for both standard and bottom bar)
             const entryZoneEnd =
@@ -712,20 +731,29 @@ export default function PixiDropletIndividual() {
 
             if (fluidProgress < entryZoneEnd) {
               // ENTRY ZONE: Squash dramatically on impact
-              yScale = ENTRY_SQUASH_SCALE;
+              targetYScale = ENTRY_SQUASH_SCALE;
             } else if (fluidProgress >= exitZoneStart) {
               // EXIT ZONE: Stretch as droplet exits/hangs
               const exitProgress =
                 (fluidProgress - exitZoneStart) / (1.0 - exitZoneStart);
-              yScale = 1.0 + (EXIT_STRETCH_SCALE - 1.0) * exitProgress;
+              targetYScale = 1.0 + (EXIT_STRETCH_SCALE - 1.0) * exitProgress;
             } else {
               // MIDDLE ZONE: Normal scale with gentle variation for text
               if (state.phase === "inText") {
-                yScale = 1 + Math.sin(fluidProgress * Math.PI) * 0.1;
+                targetYScale = 1 + Math.sin(fluidProgress * Math.PI) * 0.1;
               }
             }
 
-            state.graphic.scale.set(state.scale, state.scale * yScale);
+            // Smoothly interpolate to target Y-scale
+            state.currentYScale = lerp(
+              state.currentYScale,
+              targetYScale,
+              SCALE_LERP_SPEED,
+            );
+            state.graphic.scale.set(
+              state.scale,
+              state.scale * state.currentYScale,
+            );
             state.graphic.alpha = 1;
           } else if (state.phase === "merge") {
             // Merge into puddle - slow down but keep minimum velocity
@@ -739,10 +767,15 @@ export default function PixiDropletIndividual() {
             state.graphic.alpha = mergeFade;
             // Merge: gradually squash and widen as it spreads into puddle
             const mergeXScale = 1 + mergeProgress * 0.3;
-            const mergeYScale = 1 - mergeProgress * 0.3; // Squash vertically as it spreads
+            const targetMergeYScale = 1 - mergeProgress * 0.3; // Squash vertically as it spreads
+            state.currentYScale = lerp(
+              state.currentYScale,
+              targetMergeYScale,
+              SCALE_LERP_SPEED,
+            );
             state.graphic.scale.set(
               state.scale * mergeXScale,
-              state.scale * mergeYScale,
+              state.scale * state.currentYScale,
             );
           }
 
