@@ -42,17 +42,17 @@
   - Commit: `fix: remove gray background, keep pure black`
   - Branch: `issue-3-gray-background`
 
-- [ ] **Issue #4: Red bars don't prerender on HTML/CSS**
+- [x] **Issue #4: Red bars don't prerender on HTML/CSS**
   - Problem: Red bars appear suddenly after PixiJS loads instead of being visible immediately
   - Solution: Restore HTML/CSS red bar overlays that show before PixiJS loads
-  - Status: Not started
+  - Status: ✅ Complete
   - Commit: `fix: prerender red bars in HTML before PixiJS load`
 
-- [ ] **Issue #5: Red text background instant fill**
+- [x] **Issue #5: Red text background instant fill**
   - Problem: Red background appears instantly on all letters
-  - Solution: Animate red "blood dripping" effect from top to bottom of letters
-  - Status: Not started
-  - Commit: `feat: add blood dripping animation to text background`
+  - Solution: Animate red "blood dripping" effect from top to bottom of letters using a performant mask.
+  - Status: ✅ Complete
+  - Commit: `feat(perf): Optimize text reveal animation and document learnings`
 
 ---
 

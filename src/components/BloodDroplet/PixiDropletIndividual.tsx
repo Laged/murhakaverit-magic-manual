@@ -199,6 +199,8 @@ export default function PixiDropletIndividual() {
         BlurFilter,
         ColorMatrixFilter,
         Rectangle,
+        RenderTexture,
+        Sprite,
       } = await import("pixi.js");
       if (destroyed) return;
 
@@ -212,21 +214,30 @@ export default function PixiDropletIndividual() {
 
       mountNode.appendChild(app.canvas);
 
-      const fpsCounter = document.createElement("div");
-      fpsCounter.style.position = "absolute";
-      fpsCounter.style.top = "10px";
-      fpsCounter.style.left = "10px";
-      fpsCounter.style.color = "white";
-      fpsCounter.style.zIndex = "100";
-      mountNode.appendChild(fpsCounter);
-
       // Goo container for filtered elements (red)
       const root = new Container();
       app.stage.addChild(root);
 
-      // Crisp container for unfiltered white overlay (no filters)
+      // Create crisp container for unfiltered white overlay (no filters)
       const crispContainer = new Container();
       app.stage.addChild(crispContainer);
+
+      // --- MASKING INFRASTRUCTURE ---
+      // 1. Create a reusable circle graphic to act as a "stamp"
+      const dropletStamp = new Graphics();
+      dropletStamp.circle(0, 0, 1); // Radius of 1, will be scaled up
+      dropletStamp.fill(0xffffff);
+
+      // 2. Create a RenderTexture. This is a texture we can draw on.
+      const maskRenderTexture = RenderTexture.create({
+        width: app.screen.width,
+        height: app.screen.height,
+      });
+
+      // 3. Create a Sprite from the RenderTexture. This sprite will be the actual mask.
+      const maskSprite = new Sprite(maskRenderTexture);
+
+      // --- END MASKING INFRASTRUCTURE ---
 
       // Add filters
       const blurFilter = new BlurFilter({
@@ -551,6 +562,7 @@ export default function PixiDropletIndividual() {
         state.velocity = 0;
 
         // Reset graphics state to be visible
+        state.graphic.renderable = false; // Initially not renderable
         state.graphic.alpha = 1.0;
         state.graphic.scale.set(0.5 * state.scale); // Set a minimum visible scale
         state.currentYScale = 1.0;
@@ -586,13 +598,7 @@ export default function PixiDropletIndividual() {
           bounds.width,
           bounds.height,
         );
-        titleText.mask = mask;
-
-        if (!titleText.mask) {
-          // Create mask only once
-          const graphicsMask = new Graphics();
-          titleText.mask = graphicsMask;
-        }
+        titleText.mask = maskSprite;
 
         // DEBUG: Draw blue border around text bounds
         if (DEBUG_SHOW_BOUNDING_BOXES) {
@@ -633,10 +639,6 @@ export default function PixiDropletIndividual() {
       const tick = (ticker: Ticker) => {
         const dt = ticker.deltaTime / 60;
         const { height } = app.screen;
-
-        // Update FPS counter
-        const fps = ticker.FPS;
-        fpsCounter.textContent = `FPS: ${fps.toFixed(2)}`;
 
         // Update global animation timer
         globalAnimTime += dt;
@@ -699,8 +701,12 @@ export default function PixiDropletIndividual() {
 
           if (elapsed < 0) {
             state.graphic.alpha = 0;
+            state.graphic.renderable = false;
             return;
           }
+
+          // Make it renderable once its delay has passed
+          state.graphic.renderable = true;
 
           // Calculate droplet dimensions (per-droplet size!)
           const physBaseSize = isMobile
@@ -1006,7 +1012,7 @@ export default function PixiDropletIndividual() {
           state.graphic.x = state.offset + state.x;
           state.graphic.y = state.y;
 
-          // Reveal text mask where droplet is passing through
+          // Reveal text mask by stamping the droplet's current position onto the render texture
           if (state.phase === "inText") {
             const dropletRadius = isMobile
               ? (DROPLET_BASE_WIDTH *
@@ -1015,15 +1021,17 @@ export default function PixiDropletIndividual() {
                 2
               : (DROPLET_BASE_WIDTH * state.scale) / 2;
 
-            const mask = titleText.mask as Graphics;
-            if (mask) {
-              mask.circle(
-                state.graphic.x,
-                state.graphic.y,
-                dropletRadius * 2.5,
-              );
-              mask.fill(0xffffff);
-            }
+            // Position and scale the stamp
+            dropletStamp.x = state.graphic.x;
+            dropletStamp.y = state.graphic.y;
+            dropletStamp.scale.set(dropletRadius * 2.5);
+
+            // Render the stamp to the texture
+            app.renderer.render({
+              container: dropletStamp,
+              target: maskRenderTexture,
+              clear: false, // Don't clear the texture, just add to it
+            });
           }
 
           // Draw debug bounding box
@@ -1080,6 +1088,10 @@ export default function PixiDropletIndividual() {
       };
 
       const resizeHandler = () => {
+        // Resize the render texture
+        maskRenderTexture.resize(app.screen.width, app.screen.height);
+
+        // Rerun layout logic
         layout();
       };
 
@@ -1092,9 +1104,10 @@ export default function PixiDropletIndividual() {
         if (mountNode.contains(app.canvas)) {
           mountNode.removeChild(app.canvas);
         }
-        if (mountNode.contains(fpsCounter)) {
-          mountNode.removeChild(fpsCounter);
-        }
+
+        // Clean up the render texture
+        maskRenderTexture.destroy();
+
         app.destroy(true, { children: true });
       };
     };
