@@ -293,6 +293,16 @@ export default function PixiDropletSceneWrapper({
       className={`relative w-full overflow-hidden ${containerBgClass}`}
       style={{ height: "95vh" }}
     >
+      {/* Prerendered red bars - visible immediately before PixiJS loads */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[62px] pointer-events-none z-10"
+        style={{ backgroundColor: "#880808" }}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[62px] pointer-events-none z-10"
+        style={{ backgroundColor: "#880808" }}
+      />
+
       {mode === "css" && (
         <div className="absolute inset-0 pointer-events-none">
           <CrispBloodDroplet
