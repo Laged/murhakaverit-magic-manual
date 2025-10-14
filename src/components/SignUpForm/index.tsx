@@ -441,7 +441,7 @@ export default function SignUpForm({
         <div className={styles.field}>
           <div className={styles.fieldTitle}>
             <label htmlFor={pelikiinnostusId} className={styles.label}>
-              Pelikiinnostus <span className={styles.required}>*</span>
+              Pelikiinnostus (max. 4) <span className={styles.required}>*</span>
             </label>
             <div className={styles.errorContainer}>
               {errors.Pelikiinnostus && (
@@ -460,7 +460,11 @@ export default function SignUpForm({
                   onChange={() =>
                     handleCheckboxChange("Pelikiinnostus", option)
                   }
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting ||
+                    (formData.Pelikiinnostus.length >= 4 &&
+                      !formData.Pelikiinnostus.includes(option))
+                  }
                 />
                 <label
                   htmlFor={`pelikiinnostus-${option}`}
