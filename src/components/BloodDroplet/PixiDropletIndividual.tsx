@@ -2,6 +2,12 @@
 
 import type { Application, Graphics, Ticker } from "pixi.js";
 import { useEffect, useRef } from "react";
+import {
+  ANIM_DROPLET_START,
+  ANIM_TOP_BAR_START,
+  BarAnimation,
+  TextDripMask,
+} from "./bloodAnimationClasses";
 
 /**
  * PHASE 5: Individual Droplet Reset
@@ -18,8 +24,8 @@ const TITLE_INTRO_DURATION = 1.2; // seconds
 
 // === GOO EFFECT CONFIGURATION ===
 // These control the "gooeyness" of the blood droplet merging effect
-const BLUR_STRENGTH = 20; // Higher = more blur (original: 20, test had 16)
-const BLUR_QUALITY = 10; // Higher = smoother blur (1-15)
+const BLUR_STRENGTH = 40; // Higher = more blur (original: 20, test had 16)
+const BLUR_QUALITY = 15; // Higher = smoother blur (1-15)
 const ALPHA_MULTIPLY = 20; // Alpha contrast multiply (original: 15)
 const ALPHA_OFFSET = -5; // Alpha contrast offset (original: -5)
 
@@ -38,6 +44,8 @@ const _DROPLET_MAX_OFFSET = 75; // percentage (unused, legacy)
 
 // === TEXT STYLING ===
 const RED_LAYER_STROKE_WIDTH_MULTIPLIER = 0.03; // Larger stroke for red layer
+const RED_LAYER_STROKE_WIDTH_MIN = 0.005; // Start very thin (hidden behind white)
+const RED_LAYER_STROKE_WIDTH_GROWTH = 0.003; // Grow per droplet passing through
 const TIP_OFFSET_VARIATION = 10; // pixels (how much droplet shapes vary)
 
 // === PHYSICS CONSTANTS (TUNE THESE!) ===
@@ -72,8 +80,8 @@ const ENTRY_SQUASH_SCALE = 0.7; // Y-scale on entry/impact (0.7 = 30% shorter/co
 const SCALE_LERP_SPEED = 0.25; // How fast to interpolate scale changes (0.15 = 15% per frame)
 
 // === MOBILE DEVICE SCALING (TUNE THESE!) ===
-const MOBILE_DROPLET_SCALE = 0.5; // Scale down droplet min size on mobile
-const MOBILE_DROPLET_WIDTH_SCALE = 0.7; // Width scaling for mobile droplets
+const MOBILE_DROPLET_SCALE = 0.3; // Scale down droplet min size on mobile
+const MOBILE_DROPLET_WIDTH_SCALE = 0.5; // Width scaling for mobile droplets
 const MOBILE_DROPLET_HEIGHT_SCALE = 0.8; // Height scaling for mobile droplets
 const MOBILE_PHYSICS_SCALE = 0.5; // Overall physics size calculation scale
 const MOBILE_GRAVITY_SCALE = 0.5; // Reduce gravity on mobile
@@ -89,6 +97,7 @@ interface DropletState {
   delay: number;
   offset: number;
   // Physics state
+  x: number; // Current Y position
   y: number; // Current Y position
   velocity: number; // Current velocity (pixels per frame)
   phase: "spawn" | "freefall" | "inTopBar" | "inText" | "inBottomBar" | "merge";
@@ -204,6 +213,9 @@ export default function PixiDropletIndividual() {
       const bottomBar = new Graphics();
       root.addChild(bottomBar);
 
+      // Global animation timer for coordinated blood appearance animations
+      let globalAnimTime = 0;
+
       // Load Creepster font
       const loadWebFont = async (url: string) => {
         const existingLink = document.querySelector(`link[href="${url}"]`);
@@ -243,11 +255,12 @@ export default function PixiDropletIndividual() {
         fontSize * 0.5,
       );
 
-      // Calculate stroke width
-      const strokeWidth = Math.max(
+      // Calculate initial stroke width (will be animated)
+      const maxStrokeWidth = Math.max(
         2,
         fontSize * RED_LAYER_STROKE_WIDTH_MULTIPLIER,
       );
+      const initialStrokeWidth = fontSize * RED_LAYER_STROKE_WIDTH_MIN;
 
       const devicePixelRatio = window.devicePixelRatio || 1;
 
@@ -262,8 +275,8 @@ export default function PixiDropletIndividual() {
           lineHeight: 0.8 * fontSize,
           fontWeight: "900",
           letterSpacing: redLetterSpacing,
-          stroke: { color: 0xffffff, width: strokeWidth },
-          padding: strokeWidth * 2,
+          stroke: { color: 0xffffff, width: initialStrokeWidth },
+          padding: maxStrokeWidth * 2,
         },
       });
       titleText.roundPixels = true;
@@ -272,6 +285,12 @@ export default function PixiDropletIndividual() {
       titleText.alpha = 0;
       titleText.anchor.set(0.5);
       root.addChild(titleText);
+
+      // Create mask for text drip animation (DISABLED for now - causing issues)
+      const textMask = new Graphics();
+      root.addChild(textMask);
+      // TODO fix the text mask before enabling
+      // titleText.mask = textMask; // DISABLED
 
       // Create crisp white text overlay (no filters)
       const crispTitleText = new Text({
@@ -284,8 +303,8 @@ export default function PixiDropletIndividual() {
           lineHeight: 0.8 * fontSize,
           fontWeight: "400",
           letterSpacing: whiteLetterSpacing,
-          stroke: { color: 0xffffff, width: strokeWidth },
-          padding: strokeWidth * 2,
+          stroke: { color: 0xffffff, width: maxStrokeWidth },
+          padding: maxStrokeWidth * 2,
         },
       });
       crispTitleText.roundPixels = true;
@@ -299,6 +318,15 @@ export default function PixiDropletIndividual() {
       let titleIntroElapsed = 0;
       let titleIntroActive = true;
 
+      // Animation systems - will be initialized after layout
+      let textDripMaskAnim: TextDripMask | null = null;
+      let topBarAnim: BarAnimation | null = null;
+      let bottomBarAnim: BarAnimation | null = null;
+
+      // Red text stroke width animation
+      let currentRedStrokeMultiplier = RED_LAYER_STROKE_WIDTH_MIN;
+      let dropletsPassedThroughText = 0;
+
       // DEBUG: Create blue border to visualize text bounds (in crisp container to avoid filters)
       const debugBorder = new Graphics();
       crispContainer.addChild(debugBorder);
@@ -311,8 +339,8 @@ export default function PixiDropletIndividual() {
 
       // Adjust blur and alpha for mobile - less blur so droplets are visible
       if (isMobile) {
-        blurFilter.strength = 20;
-        alphaMatrix.matrix[14] = 15; // Reduce alpha multiply
+        blurFilter.strength = 25;
+        alphaMatrix.matrix[14] = 20; // Reduce alpha multiply
         alphaMatrix.matrix[19] = -3; // Reduce alpha offset
       }
 
@@ -337,6 +365,7 @@ export default function PixiDropletIndividual() {
           elapsedTime: 0,
           delay: Math.random() * DROPLET_MAX_DELAY,
           offset: 0, // Will be set by resetDroplet based on text bounds
+          x: 0,
           y: 0,
           velocity: 0,
           phase: "spawn",
@@ -426,11 +455,17 @@ export default function PixiDropletIndividual() {
         // Creepster font is roughly 0.6x fontSize wide per character
         const charWidth = fontSize * 0.6;
 
+        // Calculate droplet width for spawn offset (accounts for top bar tilt)
+        const dropletWidth = isMobile
+          ? DROPLET_BASE_WIDTH * MOBILE_DROPLET_WIDTH_SCALE * state.scale
+          : DROPLET_BASE_WIDTH * state.scale;
+
         // Random position within text bounds
         // Left: 5% margin to avoid leftmost chars
         // Right: subtract charWidth to avoid rightmost chars (-, T)
+        // Add droplet width offset to account for left-ward gravity in top bar
         const leftMargin = textWidth * 0.05;
-        const minX = textLeft + leftMargin;
+        const minX = textLeft + leftMargin + dropletWidth;
         const maxX = textRight - charWidth;
         state.offset = minX + Math.random() * (maxX - minX);
 
@@ -453,10 +488,11 @@ export default function PixiDropletIndividual() {
       const layout = () => {
         const { width, height } = app.screen;
         const offset = 100;
-        drawBar(topBar, width + offset * 2);
-        drawBar(bottomBar, width + offset * 2);
+        // Don't draw bars here - animation system will handle it
+        // drawBar(topBar, width + offset * 2);
+        // drawBar(bottomBar, width + offset * 2);
         topBar.position.set(-offset, 0);
-        bottomBar.position.set(-100, height - BAR_HEIGHT);
+        bottomBar.position.set(-offset, height - BAR_HEIGHT);
 
         // Position text at center + 31px offset to match CSS padding-top: 62px
         // (62px / 2 = 31px because anchor is at 0.5)
@@ -480,15 +516,67 @@ export default function PixiDropletIndividual() {
         }
       };
 
-      // Layout first, THEN initialize droplets (so text bounds are correct)
+      // Layout first, THEN initialize droplets and animations (so text bounds are correct)
       layout();
       droplets.forEach((state, i) => {
         resetDroplet(state, i);
       });
 
+      // Initialize animation systems after layout
+      const textBounds = titleText.getBounds();
+      textDripMaskAnim = new TextDripMask(
+        textMask,
+        // TODO: These text bounds might be off in the beginning since the text is animated right?
+        textBounds.width,
+        textBounds.height,
+        textBounds.y,
+        isMobile,
+      );
+
+      const { width, height } = app.screen;
+      const offset = 100;
+      topBarAnim = new BarAnimation(
+        topBar,
+        "top",
+        width + offset * 2, // Match bar width with offset
+        0,
+        isMobile,
+      );
+
+      bottomBarAnim = new BarAnimation(
+        bottomBar,
+        "bottom",
+        width + offset * 2, // Match bar width with offset
+        height,
+        isMobile,
+      );
+
       const tick = (ticker: Ticker) => {
         const dt = ticker.deltaTime / 60;
         const { height } = app.screen;
+
+        // Update global animation timer
+        globalAnimTime += dt;
+
+        // === ANIMATED BLOOD APPEARANCE SYSTEM ===
+
+        // 1. Top bar animation (starts immediately)
+        if (topBarAnim && globalAnimTime >= ANIM_TOP_BAR_START) {
+          topBarAnim.update(dt);
+          topBarAnim.draw();
+        }
+
+        // 2. Text drip mask animation (DISABLED - causing text to disappear)
+        if (textDripMaskAnim && globalAnimTime >= 0) {
+          textDripMaskAnim.update(dt);
+          textDripMaskAnim.draw();
+        }
+
+        // 3. Bottom bar animation (updates throughout, grows with droplets)
+        if (bottomBarAnim) {
+          bottomBarAnim.update(dt);
+          bottomBarAnim.draw();
+        }
 
         // Animate title intro (both red and white text)
         if (titleIntroActive) {
@@ -513,7 +601,31 @@ export default function PixiDropletIndividual() {
           }
         }
 
+        // Animate red text stroke width based on droplets passing through
+        const targetStrokeMultiplier = Math.min(
+          RED_LAYER_STROKE_WIDTH_MIN +
+            dropletsPassedThroughText * RED_LAYER_STROKE_WIDTH_GROWTH,
+          RED_LAYER_STROKE_WIDTH_MULTIPLIER,
+        );
+        currentRedStrokeMultiplier +=
+          (targetStrokeMultiplier - currentRedStrokeMultiplier) * 0.1;
+
+        const currentStrokeWidth = fontSize * currentRedStrokeMultiplier;
+        if (
+          titleText.style.stroke &&
+          typeof titleText.style.stroke === "object"
+        ) {
+          //stroke.width does not exist
+          //titleText.style.stroke.width = currentStrokeWidth;
+        }
+
         droplets.forEach((state, index) => {
+          // Don't update droplets until animation start time
+          if (globalAnimTime < ANIM_DROPLET_START) {
+            state.graphic.alpha = 0;
+            return;
+          }
+
           state.elapsedTime += dt;
           const elapsed = state.elapsedTime - state.delay;
 
@@ -564,6 +676,10 @@ export default function PixiDropletIndividual() {
             const velocityScale = isMobile ? MOBILE_SPAWN_VELOCITY_SCALE : 1.0;
             const spawnProgress = Math.min(elapsed / 0.5, 1.0);
             const spawnThreshold = 0.9;
+            // TODO: Make state.x move the droplet while in top bar
+            //const spawnOffset =
+            //  DROPLET_BASE_WIDTH - DROPLET_BASE_WIDTH * spawnProgress;
+            state.x = 0;
             state.y = topBarBottom - halfHeight - 10 + spawnProgress * 50;
             state.velocity = spawnProgress * 2 * velocityScale;
             // Spawn starts squashed, gradually returns to normal
@@ -615,11 +731,18 @@ export default function PixiDropletIndividual() {
             // Check if we've exited the text
             if (!dropletInsideText && dropletTop > textBottom) {
               state.phase = "freefall";
+              // Droplet passed through text - grow red stroke
+              dropletsPassedThroughText++;
             }
           } else if (state.phase === "inBottomBar") {
             // Transition to merge when deep enough
             if (dropletBottom > bottomPuddleSurface + dropletHeight) {
               state.phase = "merge";
+              // Add ripple effect to bottom bar on merge
+              if (bottomBarAnim && globalAnimTime >= ANIM_DROPLET_START) {
+                bottomBarAnim.addRipple(state.offset, state.velocity * 1.1);
+                bottomBarAnim.onDropletMerged();
+              }
             }
           } else if (state.phase === "merge") {
             // Stay in merge until reset
@@ -783,7 +906,8 @@ export default function PixiDropletIndividual() {
           state.y += state.velocity * dt * 60; // Normalize by 60fps
 
           // Apply position
-          state.graphic.x = state.offset;
+          // TODO: Make state.x move the droplet while in top bar
+          state.graphic.x = state.offset + state.x;
           state.graphic.y = state.y;
 
           // Draw debug bounding box
